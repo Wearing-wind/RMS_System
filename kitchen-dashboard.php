@@ -52,7 +52,7 @@
 
     <main class="max-w-md mx-auto px-4 pt-3">
         
-        <!-- Live Quick Stats Counter Cards (3-Column Grid) -->
+        <!-- Live Quick Stats Counter Cards -->
         <div class="grid grid-cols-3 gap-2.5 mb-4">
             <div class="bg-zinc-900/90 border border-rose-500/30 rounded-2xl p-3 text-center">
                 <div class="text-xs font-bold text-rose-400">New</div>
@@ -130,19 +130,15 @@
         </div>
     </div>
 
-    <!-- Fixed Bottom Navigation Bar -->
+    <!-- Kitchen Navigation Bar (Dedicated Kitchen Tabs Only) -->
     <nav class="fixed bottom-0 left-0 right-0 z-40 max-w-md mx-auto bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800/80 flex justify-around items-center h-16 rounded-t-2xl px-2">
-        <a href="menu.php" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
-            <span class="text-lg">🍽️</span>
-            <span>Menu</span>
-        </a>
-        <a href="kitchen-dashboard.php" class="flex flex-col items-center gap-0.5 text-amber-500 font-extrabold text-[10px]">
+        <a href="kitchen-dashboard.php" class="flex flex-col items-center gap-0.5 text-amber-500 font-extrabold text-xs">
             <span class="text-lg">👨‍🍳</span>
-            <span>KDS Chef</span>
+            <span>KDS Stream</span>
         </a>
-        <a href="admin/index.php" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
-            <span class="text-lg">📊</span>
-            <span>Manager</span>
+        <a href="kitchen-menu.php" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-xs">
+            <span class="text-lg">📋</span>
+            <span>Today's Menu</span>
         </a>
     </nav>
 

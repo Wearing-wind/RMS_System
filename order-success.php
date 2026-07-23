@@ -1,80 +1,32 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full bg-zinc-950 text-zinc-100">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#09090b">
     <title>Order Tracker - QR Cafe</title>
-    <link rel="stylesheet" href="css/spatial.css">
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              amber: {
+                500: '#f59e0b',
+                600: '#d97706',
+              }
+            }
+          }
+        }
+      }
+    </script>
     <style>
-        .progress-bar-spatial {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin: 24px 0;
-            position: relative;
-        }
-
-        .progress-bar-spatial::before {
-            content: '';
-            position: absolute;
-            top: 20px;
-            left: 24px;
-            right: 24px;
-            height: 3px;
-            background: rgba(255, 255, 255, 0.1);
-            z-index: 1;
-        }
-
-        .progress-step {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            position: relative;
-            z-index: 2;
-            opacity: 0.4;
-            transition: var(--transition);
-        }
-
-        .progress-step.active, .progress-step.completed {
-            opacity: 1;
-        }
-
-        .progress-icon {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background: rgba(22, 17, 13, 0.9);
-            border: 2px solid var(--glass-border);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.15rem;
-            margin-bottom: 4px;
-            transition: var(--transition-spring);
-        }
-
-        .progress-step.active .progress-icon {
-            border-color: var(--primary);
-            box-shadow: 0 0 18px var(--primary-glow);
-            transform: scale(1.1);
-            background: var(--primary);
-            color: #0c0907;
-        }
-
-        .progress-step.completed .progress-icon {
-            border-color: var(--success);
-            background: rgba(34, 197, 94, 0.18);
-            color: #4ade80;
-        }
-
-        .progress-label {
-            font-size: 0.72rem;
-            font-weight: 700;
-            color: var(--text-secondary);
-        }
+        body { overscroll-behavior-y: contain; -webkit-tap-highlight-color: transparent; }
     </style>
 </head>
-<body>
+<body class="min-h-full pb-24 font-sans antialiased selection:bg-amber-500 selection:text-zinc-950">
+
     <?php
     require_once 'config.php';
     $conn = getDBConnection();
@@ -132,180 +84,140 @@
     $payment_method = $order['payment_method'] ?? 'pending';
     ?>
 
-    <!-- Mobile Header Bar -->
-    <header class="header">
-        <div class="mobile-app-shell">
-            <a href="menu.php?table=<?php echo $table_number; ?>" class="logo">
+    <!-- Sticky Mobile Header -->
+    <header class="sticky top-0 z-40 bg-zinc-950/90 backdrop-blur-xl border-b border-zinc-800/80 px-4 py-3.5">
+        <div class="max-w-md mx-auto flex items-center justify-between gap-3">
+            <a href="menu.php?table=<?php echo urlencode($table_number); ?>" class="flex items-center gap-2 text-lg font-black text-white">
                 <span>☕</span> QR Cafe & Dining
             </a>
-            <span class="table-badge">📍 Table <?php echo $table_number; ?></span>
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 font-bold text-xs">
+                📍 Table <?php echo $table_number; ?>
+            </span>
         </div>
     </header>
 
-    <!-- Main Mobile Shell Container -->
-    <main class="mobile-app-shell" style="margin-top: 14px; margin-bottom: 20px;">
-        <div class="spatial-card" style="padding: 20px 16px;">
+    <main class="max-w-md mx-auto px-4 pt-4">
+        <div class="bg-zinc-900/90 border border-zinc-800 rounded-3xl p-5 shadow-2xl space-y-4">
 
             <?php if ($is_cancelled): ?>
-                <!-- REJECTED / CANCELLED ORDER DISPLAY -->
-                <div style="text-align: center; padding: 10px 0;">
-                    <div style="font-size: 3rem; margin-bottom: 10px;">🚫</div>
-                    <h1 style="font-size: 1.4rem; font-weight: 800; color: var(--danger); margin-bottom: 4px; font-family: var(--font-serif);">Order Cancelled / Rejected</h1>
-                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px;">Order #<?php echo $order['id']; ?> has been cancelled by the kitchen.</p>
-
-                    <div style="background: rgba(244, 63, 94, 0.1); border: 1px solid rgba(244, 63, 94, 0.3); border-radius: var(--radius-md); padding: 14px; text-align: left; margin-bottom: 20px;">
-                        <h4 style="color: #fda4af; font-size: 0.82rem; margin-bottom: 4px;">Reason for Cancellation:</h4>
-                        <p style="color: var(--text-primary); font-size: 0.88rem; font-weight: 600;">
-                            <?php 
-                            $note_text = $order['notes'] ?? '';
-                            if (preg_match('/\[REJECTED:\s*(.*?)\]/', $note_text, $matches)) {
-                                echo htmlspecialchars($matches[1]);
-                            } else {
-                                echo 'Kitchen is unable to process this order or customer requested cancellation due to wrong order/quantity.';
-                            }
-                            ?>
-                        </p>
-                    </div>
-
-                    <a href="menu.php?table=<?php echo $table_number; ?>" class="checkout-btn" style="display: block; width: 100%; padding: 12px;">
+                <!-- REJECTED DISPLAY -->
+                <div class="text-center py-4">
+                    <div class="text-5xl mb-3">🚫</div>
+                    <h1 class="text-xl font-black text-rose-500 mb-1">Order Cancelled / Rejected</h1>
+                    <p class="text-xs text-zinc-400 mb-4">Order #<?php echo $order['id']; ?> has been cancelled by the kitchen.</p>
+                    <a href="menu.php?table=<?php echo urlencode($table_number); ?>" class="h-12 w-full rounded-2xl bg-amber-500 text-zinc-950 font-black text-sm flex items-center justify-center">
                         Modify & Place New Order →
                     </a>
                 </div>
-
             <?php else: ?>
-                <!-- ACTIVE ORDER TRACKER DISPLAY -->
-                <div style="text-align: center;">
-                    <div style="font-size: 2.2rem; margin-bottom: 2px;">✨</div>
-                    <h1 style="font-size: 1.4rem; font-weight: 800; margin-bottom: 2px; font-family: var(--font-serif);">Order Tracker</h1>
-                    <p style="color: var(--primary); font-weight: 800; font-size: 0.95rem; margin-bottom: 16px;">Order #<?php echo $order['id']; ?></p>
+                <!-- ACTIVE ORDER TRACKER -->
+                <div class="text-center">
+                    <div class="text-4xl mb-1">✨</div>
+                    <h1 class="text-xl font-black text-white mb-1">Order Tracker</h1>
+                    <p class="text-amber-400 font-black text-sm">Order #<?php echo $order['id']; ?></p>
                 </div>
 
-                <!-- Progress Tracker Bar -->
-                <div class="progress-bar-spatial">
-                    <div class="progress-step <?php echo in_array($order_status, ['new', 'preparing', 'ready', 'completed']) ? 'completed' : ''; ?>">
-                        <div class="progress-icon">✓</div>
-                        <span class="progress-label">Placed</span>
+                <!-- Status Progress Badges -->
+                <div class="grid grid-cols-4 gap-1.5 bg-zinc-950/80 p-2 rounded-2xl border border-zinc-800 text-center">
+                    <div class="p-2 rounded-xl border <?php echo in_array($order_status, ['new', 'preparing', 'ready', 'completed']) ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 font-black' : 'border-zinc-800 text-zinc-600'; ?> text-[10px]">
+                        ✓ Placed
                     </div>
-                    <div class="progress-step <?php echo in_array($order_status, ['preparing', 'ready', 'completed']) ? 'completed' : ''; ?> <?php echo $order_status === 'preparing' ? 'active' : ''; ?>">
-                        <div class="progress-icon">🔥</div>
-                        <span class="progress-label">Preparing</span>
+                    <div class="p-2 rounded-xl border <?php echo in_array($order_status, ['preparing', 'ready', 'completed']) ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 font-black' : 'border-zinc-800 text-zinc-600'; ?> text-[10px]">
+                        🔥 Prep
                     </div>
-                    <div class="progress-step <?php echo in_array($order_status, ['ready', 'completed']) ? 'completed' : ''; ?> <?php echo $order_status === 'ready' ? 'active' : ''; ?>">
-                        <div class="progress-icon">✅</div>
-                        <span class="progress-label">Ready</span>
+                    <div class="p-2 rounded-xl border <?php echo in_array($order_status, ['ready', 'completed']) ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 font-black' : 'border-zinc-800 text-zinc-600'; ?> text-[10px]">
+                        ✅ Ready
                     </div>
-                    <div class="progress-step <?php echo $order_status === 'completed' ? 'active' : ''; ?>">
-                        <div class="progress-icon">🍽️</div>
-                        <span class="progress-label">Served</span>
+                    <div class="p-2 rounded-xl border <?php echo $order_status === 'completed' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 font-black' : 'border-zinc-800 text-zinc-600'; ?> text-[10px]">
+                        🍽️ Served
                     </div>
                 </div>
 
                 <!-- Order Details Breakdown -->
-                <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: 14px; margin-bottom: 18px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid var(--glass-border); font-size: 0.85rem;">
-                        <span style="color: var(--text-muted);">Status:</span>
-                        <span id="liveStatusText" style="font-weight: 800; font-size: 0.78rem; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius-pill); background: rgba(217, 155, 38, 0.2); color: var(--primary); border: 1px solid var(--primary);"><?php echo strtoupper($order_status); ?></span>
+                <div class="bg-zinc-950/80 border border-zinc-800/80 rounded-2xl p-4 space-y-2">
+                    <div class="flex justify-between items-center pb-2 border-b border-zinc-800 text-xs">
+                        <span class="text-zinc-400">Current Status:</span>
+                        <span class="px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 font-black uppercase text-[10px]"><?php echo strtoupper($order_status); ?></span>
                     </div>
 
-                    <div style="margin: 10px 0;">
-                        <h4 style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 6px;">Ordered Items:</h4>
+                    <div class="space-y-1 py-1">
                         <?php foreach ($order['items'] as $item): ?>
-                            <div style="display: flex; justify-content: space-between; font-size: 0.88rem; padding: 4px 0;">
-                                <span><?php echo htmlspecialchars($item['name']); ?> <strong style="color: var(--primary);">x<?php echo $item['quantity']; ?></strong></span>
-                                <span style="font-weight: 700; color: var(--primary);">Rs. <?php echo number_format($item['price'] * $item['quantity'], 2); ?></span>
+                            <div class="flex justify-between text-xs">
+                                <span><?php echo htmlspecialchars($item['name']); ?> <strong class="text-amber-400">x<?php echo $item['quantity']; ?></strong></span>
+                                <span class="font-black text-amber-400">Rs. <?php echo number_format($item['price'] * $item['quantity'], 2); ?></span>
                             </div>
                         <?php endforeach; ?>
                     </div>
 
-                    <div style="display: flex; justify-content: space-between; border-top: 1px solid var(--glass-border); padding-top: 8px; font-size: 1.05rem; font-weight: 800;">
+                    <div class="flex justify-between items-center pt-2 border-t border-zinc-800 font-black text-base">
                         <span>Total:</span>
-                        <span style="color: var(--primary);">Rs. <?php echo number_format($order['total_amount'] ?? $order['total'] ?? 0, 2); ?></span>
+                        <span class="text-amber-400 text-lg">Rs. <?php echo number_format($order['total_amount'] ?? $order['total'] ?? 0, 2); ?></span>
                     </div>
                 </div>
 
-                <!-- PAYMENT SECTION - SHOW QR ONLY WHEN SERVED (COMPLETED) -->
+                <!-- PAYMENT SECTION - UNLOCKS ONLY WHEN SERVED -->
                 <?php if ($is_completed): ?>
-                    <div style="background: rgba(255, 255, 255, 0.04); border: 1px solid var(--glass-border-bright); border-radius: var(--radius-md); padding: 16px; text-align: center; margin-bottom: 18px;">
-                        <h3 style="font-size: 1rem; font-weight: 800; margin-bottom: 10px; color: var(--primary);">
-                            🎉 Order Served! Choose Payment Method
-                        </h3>
+                    <div class="bg-zinc-950/90 border border-emerald-500/30 rounded-2xl p-4 text-center space-y-3">
+                        <h3 class="text-sm font-black text-emerald-400">🎉 Order Served! Select Payment Option</h3>
 
-                        <!-- Payment Method Toggle (QR vs Cash) -->
-                        <div class="payment-choice-grid">
-                            <div class="payment-choice-card <?php echo $payment_method !== 'cash' ? 'active' : ''; ?>" id="payQrTabBtn" onclick="selectPaymentMethod('qr')">
-                                <div class="payment-choice-icon">💳</div>
-                                <div class="payment-choice-title">Digital Wallet (QR)</div>
-                            </div>
-                            <div class="payment-choice-card <?php echo $payment_method === 'cash' ? 'active' : ''; ?>" id="payCashTabBtn" onclick="selectPaymentMethod('cash')">
-                                <div class="payment-choice-icon">💵</div>
-                                <div class="payment-choice-title">Pay via Cash</div>
-                            </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button id="payQrTabBtn" onclick="selectPaymentMethod('qr')" class="p-3 rounded-xl border border-amber-500 bg-amber-500/10 text-amber-400 font-bold text-xs active:scale-95">
+                                💳 Digital QR
+                            </button>
+                            <button id="payCashTabBtn" onclick="selectPaymentMethod('cash')" class="p-3 rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-300 font-bold text-xs active:scale-95">
+                                💵 Pay Cash
+                            </button>
                         </div>
 
-                        <!-- DIGITAL WALLET (QR CODE) DISPLAY -->
-                        <div id="digitalQrPaySection" style="display: <?php echo $payment_method !== 'cash' ? 'block' : 'none'; ?>; margin-top: 14px;">
+                        <div id="digitalQrPaySection" style="display: block;" class="pt-2">
                             <?php if ($payment_settings && !empty($payment_settings['qr_code_image'])): ?>
-                                <div style="margin-bottom: 12px;">
-                                    <img id="paymentQrImage" src="images/<?php echo htmlspecialchars($payment_settings['qr_code_image']); ?>" alt="Payment QR" style="max-width: 160px; width: 100%; border-radius: var(--radius-sm); border: 2px solid var(--primary); padding: 8px; background: white;">
-                                </div>
-                                <a href="images/<?php echo htmlspecialchars($payment_settings['qr_code_image']); ?>" download="Payment_QR_Order_<?php echo $order['id']; ?>.jpg" class="checkout-btn" style="display: inline-block; width: auto; padding: 8px 20px; font-size: 0.85rem;">
+                                <img src="images/<?php echo htmlspecialchars($payment_settings['qr_code_image']); ?>" alt="Payment QR" class="max-w-[160px] mx-auto rounded-xl border-2 border-amber-500 p-2 bg-white mb-3">
+                                <a href="images/<?php echo htmlspecialchars($payment_settings['qr_code_image']); ?>" download="Payment_QR_Order_<?php echo $order['id']; ?>.jpg" class="h-10 px-4 rounded-xl bg-amber-500 text-zinc-950 font-black text-xs inline-flex items-center gap-1">
                                     📥 Download Payment QR
                                 </a>
-                            <?php else: ?>
-                                <div style="font-size: 2.8rem; margin-bottom: 6px;">📱</div>
-                                <p style="color: var(--text-muted); font-size: 0.8rem;">Scan payment QR code at counter or wallet</p>
                             <?php endif; ?>
-                            <p style="color: var(--text-muted); font-size: 0.78rem; margin-top: 8px;"><?php echo htmlspecialchars($payment_settings['payment_note'] ?? 'Scan QR code to pay via digital wallet'); ?></p>
                         </div>
 
-                        <!-- CASH PAYMENT DISPLAY -->
-                        <div id="cashPaySection" style="display: <?php echo $payment_method === 'cash' ? 'block' : 'none'; ?>; margin-top: 14px;">
-                            <div style="background: rgba(34, 197, 94, 0.15); border: 1px solid var(--success); border-radius: var(--radius-sm); padding: 14px; text-align: center;">
-                                <div style="font-size: 2rem; margin-bottom: 4px;">💵</div>
-                                <h4 style="color: #4ade80; font-size: 0.95rem; margin-bottom: 4px;">Cash Payment Requested</h4>
-                                <p style="color: var(--text-secondary); font-size: 0.82rem;">
-                                    A server has been notified to collect cash payment of <strong>Rs. <?php echo number_format($order['total_amount'] ?? $order['total'] ?? 0, 2); ?></strong> at <strong>Table <?php echo $table_number; ?></strong>.
-                                </p>
+                        <div id="cashPaySection" style="display: none;" class="pt-2">
+                            <div class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold space-y-1">
+                                <div class="text-2xl">💵</div>
+                                <h4>Cash Payment Requested</h4>
+                                <p class="text-[11px] text-zinc-300">A waiter has been dispatched to Table <?php echo $table_number; ?> to collect cash payment.</p>
                             </div>
                         </div>
                     </div>
                 <?php else: ?>
-                    <!-- PAYMENT QR NOT SHOWN YET UNTIL ORDER IS SERVED -->
-                    <div style="background: rgba(255, 255, 255, 0.02); border: 1px dashed var(--glass-border); border-radius: var(--radius-md); padding: 16px; text-align: center; margin-bottom: 18px;">
-                        <div style="font-size: 2rem; margin-bottom: 4px;">⏳</div>
-                        <h4 style="font-size: 0.88rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 2px;">Payment Options</h4>
-                        <p style="color: var(--text-muted); font-size: 0.78rem;">
-                            Payment QR code and cash payment options will automatically be displayed here once your order has been served by the kitchen.
-                        </p>
+                    <div class="bg-zinc-950/60 border border-zinc-800/80 rounded-2xl p-4 text-center space-y-1">
+                        <div class="text-2xl">⏳</div>
+                        <h4 class="text-xs font-bold text-zinc-300">Payment Options Locked</h4>
+                        <p class="text-[11px] text-zinc-500">Payment QR code and cash payment options will automatically unlock here once your order is served by the kitchen.</p>
                     </div>
                 <?php endif; ?>
 
-                <div style="text-align: center; margin-top: 16px;">
-                    <a href="menu.php?table=<?php echo $table_number; ?>" class="checkout-btn" style="display: block; width: 100%; padding: 12px;">
-                        + Order More Dishes
-                    </a>
-                </div>
+                <a href="menu.php?table=<?php echo urlencode($table_number); ?>" class="h-12 w-full rounded-2xl bg-amber-500 text-zinc-950 font-black text-sm flex items-center justify-center active:scale-95 shadow-lg shadow-amber-500/20">
+                    + Order More Dishes
+                </a>
             <?php endif; ?>
         </div>
     </main>
 
-    <!-- PINNED MOBILE BOTTOM NAVIGATION BAR -->
-    <nav class="mobile-nav-bar">
-        <a href="menu.php?table=<?php echo $table_number; ?>" class="mobile-nav-item">
-            <span class="mobile-nav-icon">🍽️</span>
+    <!-- Fixed Bottom Tab Bar -->
+    <nav class="fixed bottom-0 left-0 right-0 z-40 max-w-md mx-auto bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800/80 flex justify-around items-center h-16 rounded-t-2xl px-2">
+        <a href="menu.php?table=<?php echo urlencode($table_number); ?>" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
+            <span class="text-lg">🍽️</span>
             <span>Menu</span>
         </a>
-        <a href="cart.php?table=<?php echo $table_number; ?>" class="mobile-nav-item">
-            <span class="mobile-nav-icon">🛒</span>
+        <a href="cart.php?table=<?php echo urlencode($table_number); ?>" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
+            <span class="text-lg">🛒</span>
             <span>Cart</span>
-            <span class="mobile-nav-badge cart-badge" style="display: none;">0</span>
+            <span class="cart-badge absolute top-1 right-2 bg-amber-500 text-zinc-950 font-black text-[9px] w-4 h-4 rounded-full flex items-center justify-center" style="display: none;">0</span>
         </a>
-        <button class="mobile-nav-item" onclick="callWaiter()">
-            <span class="mobile-nav-icon">🔔</span>
+        <button onclick="callWaiter()" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
+            <span class="text-lg">🔔</span>
             <span>Waiter</span>
         </button>
-        <a href="order-success.php?table=<?php echo $table_number; ?>&order_id=<?php echo $order['id']; ?>" class="mobile-nav-item active">
-            <span class="mobile-nav-icon">📋</span>
+        <a href="order-success.php?table=<?php echo urlencode($table_number); ?>&order_id=<?php echo $order['id']; ?>" class="flex flex-col items-center gap-0.5 text-amber-500 font-extrabold text-[10px]">
+            <span class="text-lg">📋</span>
             <span>Tracker</span>
         </a>
     </nav>
@@ -316,13 +228,10 @@
         const currentStatus = "<?php echo $order_status; ?>";
 
         function selectPaymentMethod(method) {
-            document.getElementById('payQrTabBtn').classList.toggle('active', method === 'qr');
-            document.getElementById('payCashTabBtn').classList.toggle('active', method === 'cash');
             document.getElementById('digitalQrPaySection').style.display = (method === 'qr') ? 'block' : 'none';
             document.getElementById('cashPaySection').style.display = (method === 'cash') ? 'block' : 'none';
 
             if (!currentOrderId) return;
-
             fetch('api/update-order.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -333,8 +242,7 @@
                 if (data.success && method === 'cash') {
                     showToast('💵 Cash payment requested! Waiter notified to Table <?php echo $table_number; ?>', 'success');
                 }
-            })
-            .catch(err => console.error(err));
+            });
         }
 
         function pollOrderStatus() {
@@ -345,8 +253,7 @@
                     if (data.order && data.order.status !== currentStatus) {
                         window.location.reload();
                     }
-                })
-                .catch(err => console.error(err));
+                });
         }
 
         if (currentOrderId && currentStatus !== 'completed' && currentStatus !== 'cancelled') {

@@ -1,12 +1,12 @@
 <?php
-// Admin Payment QR Settings - Mobile First
+// Admin Payment Settings - Tailwind Mobile Architecture
 require_once '../config.php';
 requireAdminLogin();
 
 $conn = getDBConnection();
 
 if ($conn === null) {
-    die("Database not connected.");
+    die("Database connection failed.");
 }
 
 // Handle Form Submission
@@ -15,7 +15,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $payment_note = sanitize($_POST['payment_note']);
     $is_active = isset($_POST['is_active']) ? 1 : 0;
     
-    // Handle QR image upload
     $qr_code_image = '';
     if (isset($_FILES['qr_code_image']) && $_FILES['qr_code_image']['error'] === UPLOAD_ERR_OK) {
         $upload_dir = '../images/';
@@ -54,90 +53,122 @@ if ($res && $res->num_rows > 0) {
 $conn->close();
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full bg-zinc-950 text-zinc-100">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#0c0907">
+    <meta name="theme-color" content="#09090b">
     <title>Payment QR Settings - QR Cafe</title>
     <link rel="manifest" href="../manifest.json">
-    <link rel="stylesheet" href="../css/spatial.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              amber: {
+                500: '#f59e0b',
+                600: '#d97706',
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+        body { overscroll-behavior-y: contain; -webkit-tap-highlight-color: transparent; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
 </head>
-<body>
-    <!-- Mobile Header -->
-    <header class="header">
-        <div class="mobile-app-shell">
-            <a href="index.php" class="logo">
-                <span>💳</span> Payment QR Settings
+<body class="min-h-full pb-24 font-sans antialiased selection:bg-amber-500 selection:text-zinc-950">
+
+    <!-- Header -->
+    <header class="sticky top-0 z-40 bg-zinc-950/90 backdrop-blur-xl border-b border-zinc-800/80 px-4 py-3.5">
+        <div class="max-w-md mx-auto flex items-center justify-between gap-2">
+            <a href="index.php" class="flex items-center gap-2 font-black text-lg text-white">
+                <span>💳</span>
+                <span>Payment QR Config</span>
             </a>
-            <a href="index.php" style="color: var(--primary); text-decoration: none; font-size: 0.8rem; font-weight: 700;">Dashboard →</a>
+            <a href="index.php" class="text-xs font-bold text-amber-400">Dashboard →</a>
         </div>
     </header>
 
-    <main class="mobile-app-shell" style="margin-top: 14px; margin-bottom: 20px;">
+    <main class="max-w-md mx-auto px-4 pt-3 space-y-4">
+
+        <!-- Navigation Carousel -->
+        <nav class="flex gap-2 overflow-x-auto no-scrollbar py-1">
+            <a href="index.php" class="px-4 py-2.5 rounded-2xl font-bold text-xs bg-zinc-900 border border-zinc-800 text-zinc-300 whitespace-nowrap">📊 Dashboard</a>
+            <a href="menu-items.php" class="px-4 py-2.5 rounded-2xl font-bold text-xs bg-zinc-900 border border-zinc-800 text-zinc-300 whitespace-nowrap">🍔 Menu Items</a>
+            <a href="orders.php" class="px-4 py-2.5 rounded-2xl font-bold text-xs bg-zinc-900 border border-zinc-800 text-zinc-300 whitespace-nowrap">📋 Live Orders</a>
+            <a href="tables.php" class="px-4 py-2.5 rounded-2xl font-bold text-xs bg-zinc-900 border border-zinc-800 text-zinc-300 whitespace-nowrap">📍 Tables</a>
+            <a href="categories.php" class="px-4 py-2.5 rounded-2xl font-bold text-xs bg-zinc-900 border border-zinc-800 text-zinc-300 whitespace-nowrap">🏷️ Categories</a>
+            <a href="payment-settings.php" class="px-4 py-2.5 rounded-2xl font-black text-xs bg-amber-500 text-zinc-950 shadow-lg shadow-amber-500/20 whitespace-nowrap">💳 Payment QR</a>
+        </nav>
 
         <?php if (isset($_SESSION['success'])): ?>
-            <div style="background: rgba(34, 197, 94, 0.15); border: 1px solid var(--success); color: #4ade80; padding: 10px; border-radius: var(--radius-sm); margin-bottom: 14px; font-size: 0.85rem;">
+            <div class="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold">
                 <?php echo $_SESSION['success']; unset($_SESSION['success']); ?>
             </div>
         <?php endif; ?>
 
-        <div class="spatial-card" style="padding: 18px;">
-            <h3 style="font-size: 1.05rem; font-weight: 800; font-family: var(--font-serif); margin-bottom: 14px;">Digital Payment QR Settings</h3>
+        <!-- Settings Form Card -->
+        <section class="bg-zinc-900/90 border border-zinc-800 rounded-3xl p-5 shadow-2xl space-y-4 mb-20">
+            <h3 class="text-base font-black text-white flex items-center gap-2">💳 Digital Payment QR Settings</h3>
             
-            <form method="POST" enctype="multipart/form-data">
-                <div style="margin-bottom: 12px;">
-                    <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px;">Restaurant Name</label>
-                    <input type="text" name="restaurant_name" value="<?php echo htmlspecialchars($payment_settings['restaurant_name'] ?? 'QR Cafe'); ?>" required style="width: 100%; background: rgba(14,11,8,0.8); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); padding: 10px; color: white; font-family: inherit; font-size: 0.88rem; outline: none;">
+            <form method="POST" enctype="multipart/form-data" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-zinc-300 mb-1">Restaurant Name</label>
+                    <input type="text" name="restaurant_name" value="<?php echo htmlspecialchars($payment_settings['restaurant_name'] ?? 'QR Cafe'); ?>" required class="w-full h-12 bg-zinc-950 border border-zinc-800 rounded-2xl px-4 text-sm text-white outline-none focus:border-amber-500">
                 </div>
 
-                <div style="margin-bottom: 12px;">
-                    <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px;">Payment Note / Instructions</label>
-                    <textarea name="payment_note" rows="2" style="width: 100%; background: rgba(14,11,8,0.8); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); padding: 10px; color: white; font-family: inherit; font-size: 0.88rem; outline: none;"><?php echo htmlspecialchars($payment_settings['payment_note'] ?? 'Scan QR code to pay via Esewa or Khalti'); ?></textarea>
+                <div>
+                    <label class="block text-xs font-bold text-zinc-300 mb-1">Payment Note / Instructions</label>
+                    <textarea name="payment_note" rows="2" class="w-full bg-zinc-950 border border-zinc-800 rounded-2xl p-3.5 text-sm text-white outline-none focus:border-amber-500 resize-none"><?php echo htmlspecialchars($payment_settings['payment_note'] ?? 'Scan QR code to pay via digital wallet'); ?></textarea>
                 </div>
 
-                <div style="margin-bottom: 14px;">
-                    <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">Current QR Code Image</label>
+                <div>
+                    <label class="block text-xs font-bold text-zinc-300 mb-2">Current Payment QR Image</label>
                     <?php if (!empty($payment_settings['qr_code_image'])): ?>
-                        <div style="margin-bottom: 10px; text-align: center;">
-                            <img src="../images/<?php echo htmlspecialchars($payment_settings['qr_code_image']); ?>" alt="Payment QR" style="max-width: 150px; border-radius: var(--radius-sm); border: 2px solid var(--primary); padding: 6px; background: white;">
+                        <div class="text-center mb-3">
+                            <img src="../images/<?php echo htmlspecialchars($payment_settings['qr_code_image']); ?>" alt="Payment QR" class="max-w-[150px] mx-auto rounded-2xl border-2 border-amber-500 p-2 bg-white">
                         </div>
-                    <?php else: ?>
-                        <p style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 8px;">No QR code uploaded yet.</p>
                     <?php endif; ?>
-                    <input type="file" name="qr_code_image" accept="image/*" style="font-size: 0.8rem; color: var(--text-secondary);">
+                    <input type="file" name="qr_code_image" accept="image/*" class="text-xs text-zinc-400">
                 </div>
 
-                <div style="margin-bottom: 20px;">
-                    <label class="custom-checkbox">
-                        <input type="checkbox" name="is_active" value="1" <?php echo (!isset($payment_settings) || !empty($payment_settings['is_active'])) ? 'checked' : ''; ?>>
-                        <span class="checkbox-label" style="font-size: 0.88rem;">Enable Digital Payment QR Code</span>
+                <div class="pt-2">
+                    <label class="flex items-center gap-2.5 bg-zinc-950 border border-zinc-800 rounded-2xl p-3.5 cursor-pointer text-xs font-bold text-zinc-200">
+                        <input type="checkbox" name="is_active" value="1" <?php echo (!isset($payment_settings) || !empty($payment_settings['is_active'])) ? 'checked' : ''; ?> class="w-4 h-4 accent-amber-500">
+                        <span>Enable Digital Payment QR Code</span>
                     </label>
                 </div>
 
-                <button type="submit" class="checkout-btn" style="padding: 12px;">Save Payment Settings</button>
+                <button type="submit" class="h-12 w-full rounded-2xl bg-amber-500 text-zinc-950 font-black text-sm flex items-center justify-center active:scale-95 shadow-lg shadow-amber-500/20">
+                    Save Payment Settings
+                </button>
             </form>
-        </div>
+        </section>
 
     </main>
 
-    <!-- PINNED MOBILE BOTTOM NAVIGATION BAR FOR ADMIN -->
-    <nav class="mobile-nav-bar">
-        <a href="index.php" class="mobile-nav-item">
-            <span class="mobile-nav-icon">📊</span>
+    <!-- Manager Bottom Navigation Bar -->
+    <nav class="fixed bottom-0 left-0 right-0 z-40 max-w-md mx-auto bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800/80 flex justify-around items-center h-16 rounded-t-2xl px-2">
+        <a href="index.php" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
+            <span class="text-lg">📊</span>
             <span>Summary</span>
         </a>
-        <a href="orders.php" class="mobile-nav-item">
-            <span class="mobile-nav-icon">📋</span>
+        <a href="orders.php" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
+            <span class="text-lg">📋</span>
             <span>Orders</span>
         </a>
-        <a href="menu-items.php" class="mobile-nav-item">
-            <span class="mobile-nav-icon">🍔</span>
+        <a href="menu-items.php" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
+            <span class="text-lg">🍔</span>
             <span>Items</span>
         </a>
-        <a href="../kitchen-dashboard.php" class="mobile-nav-item">
-            <span class="mobile-nav-icon">👨‍🍳</span>
-            <span>KDS</span>
+        <a href="tables.php" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
+            <span class="text-lg">📍</span>
+            <span>Tables</span>
         </a>
     </nav>
 

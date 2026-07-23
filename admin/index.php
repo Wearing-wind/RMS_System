@@ -1,5 +1,5 @@
 <?php
-// Manager Dashboard - Mobile-Native Tailwind Architecture
+// Manager Dashboard - Tailwind Mobile Architecture
 require_once '../config.php';
 requireAdminLogin();
 
@@ -80,6 +80,8 @@ if ($menu_items_res) {
             <a href="menu-items.php" class="px-4 py-2.5 rounded-2xl font-bold text-xs bg-zinc-900 border border-zinc-800 text-zinc-300 whitespace-nowrap">🍔 Menu Items</a>
             <a href="orders.php" class="px-4 py-2.5 rounded-2xl font-bold text-xs bg-zinc-900 border border-zinc-800 text-zinc-300 whitespace-nowrap">📋 Live Orders</a>
             <a href="tables.php" class="px-4 py-2.5 rounded-2xl font-bold text-xs bg-zinc-900 border border-zinc-800 text-zinc-300 whitespace-nowrap">📍 Tables</a>
+            <a href="categories.php" class="px-4 py-2.5 rounded-2xl font-bold text-xs bg-zinc-900 border border-zinc-800 text-zinc-300 whitespace-nowrap">🏷️ Categories</a>
+            <a href="payment-settings.php" class="px-4 py-2.5 rounded-2xl font-bold text-xs bg-zinc-900 border border-zinc-800 text-zinc-300 whitespace-nowrap">💳 Payment QR</a>
         </nav>
 
         <!-- 2x2 Modern Metrics Cards Grid -->
@@ -155,7 +157,7 @@ if ($menu_items_res) {
                         <!-- Instant Switch Toggle -->
                         <div class="flex items-center gap-2">
                             <span id="stock-lbl-<?php echo $item['id']; ?>" class="text-[10px] font-black <?php echo $is_active ? 'text-emerald-400' : 'text-rose-400'; ?>">
-                                <?php echo $is_active ? 'In Stock' : 'Sold Out'; ?>
+                                <?php echo $is_active ? 'In Stock' : 'Out of Stock'; ?>
                             </span>
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" <?php echo $is_active ? 'checked' : ''; ?> onchange="toggleItemStock(<?php echo $item['id']; ?>, this.checked)" class="sr-only peer">
@@ -169,7 +171,7 @@ if ($menu_items_res) {
 
     </main>
 
-    <!-- Fixed Bottom Tab Bar -->
+    <!-- Manager Bottom Navigation Bar -->
     <nav class="fixed bottom-0 left-0 right-0 z-40 max-w-md mx-auto bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800/80 flex justify-around items-center h-16 rounded-t-2xl px-2">
         <a href="index.php" class="flex flex-col items-center gap-0.5 text-amber-500 font-extrabold text-[10px]">
             <span class="text-lg">📊</span>
@@ -183,9 +185,9 @@ if ($menu_items_res) {
             <span class="text-lg">🍔</span>
             <span>Items</span>
         </a>
-        <a href="../kitchen-dashboard.php" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
-            <span class="text-lg">👨‍🍳</span>
-            <span>KDS</span>
+        <a href="tables.php" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
+            <span class="text-lg">📍</span>
+            <span>Tables</span>
         </a>
     </nav>
 
@@ -194,17 +196,24 @@ if ($menu_items_res) {
         function toggleItemStock(itemId, isChecked) {
             const status = isChecked ? 'active' : 'sold_out';
             const label = document.getElementById('stock-lbl-' + itemId);
-            fetch('menu-items.php?action=toggle_status&id=' + itemId + '&status=' + status)
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) {
-                        if (label) {
-                            label.textContent = isChecked ? 'In Stock' : 'Sold Out';
-                            label.className = 'text-[10px] font-black ' + (isChecked ? 'text-emerald-400' : 'text-rose-400');
-                        }
-                        showToast(isChecked ? 'Item marked In Stock!' : 'Item marked Sold Out!', isChecked ? 'success' : 'warning');
+            fetch('../api/toggle-stock.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: itemId, status: status })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    if (label) {
+                        label.textContent = isChecked ? 'In Stock' : 'Out of Stock';
+                        label.className = 'text-[10px] font-black ' + (isChecked ? 'text-emerald-400' : 'text-rose-400');
                     }
-                });
+                    showToast(isChecked ? 'Item marked In Stock!' : 'Item marked Out of Stock!', isChecked ? 'success' : 'warning');
+                } else {
+                    showToast(data.message || 'Failed to update stock status', 'error');
+                }
+            })
+            .catch(err => console.error(err));
         }
     </script>
 </body>

@@ -34,13 +34,23 @@
     $conn = getDBConnection();
     $db_error = ($conn === null);
     $table_num = isset($_GET['table']) ? htmlspecialchars($_GET['table']) : '1';
+    
+    // Check if table has active placed order
+    $active_order_id = 0;
+    if ($conn) {
+        $tbl_safe = $conn->real_escape_string($table_num);
+        $res = $conn->query("SELECT id FROM orders WHERE table_number = '$tbl_safe' AND status IN ('new', 'preparing', 'ready') ORDER BY id DESC LIMIT 1");
+        if ($res && $row = $res->fetch_assoc()) {
+            $active_order_id = $row['id'];
+        }
+    }
     ?>
 
     <!-- Sticky Mobile Top Header -->
     <header class="sticky top-0 z-40 bg-zinc-950/90 backdrop-blur-xl border-b border-zinc-800/80 px-4 py-3.5">
         <div class="max-w-md mx-auto flex items-center justify-between gap-3">
             <a href="menu.php?table=<?php echo urlencode($table_num); ?>" class="flex items-center gap-2 text-lg font-black tracking-tight text-white">
-                <span class="text-xl">☕</span>
+                <span>☕</span>
                 <span>QR Cafe</span>
             </a>
             <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 font-bold text-xs">
@@ -82,8 +92,8 @@
             </div>
         </nav>
 
-        <!-- Food Grid View (2-Column Mobile Native Layout) -->
-        <section class="mb-20">
+        <!-- Food Grid View -->
+        <section class="mb-24">
             <?php if ($db_error): ?>
                 <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 text-center">
                     <div class="text-3xl mb-2">⚠️</div>
@@ -104,13 +114,13 @@
 
                     if ($result && $result->num_rows > 0) {
                         while ($item = $result->fetch_assoc()) {
-                            $sold_out = ($item['status'] === 'sold_out');
+                            $out_of_stock = ($item['status'] === 'sold_out' || $item['status'] === 'inactive');
                             $dietary = strtolower($item['dietary_type'] ?? 'veg');
                             $dietary_color = ($dietary === 'non-veg') ? 'border-red-500 bg-red-500' : 'border-emerald-500 bg-emerald-500';
+                            $prepTime = isset($item['preparation_time']) ? intval($item['preparation_time']) : 15;
                             
-                            echo '<div class="menu-item bg-zinc-900/90 border border-zinc-800/80 rounded-3xl p-3 flex flex-col justify-between transition-all active:scale-[0.98]" data-name="' . strtolower(htmlspecialchars($item['name'])) . '" data-description="' . strtolower(htmlspecialchars($item['description'])) . '">';
+                            echo '<div id="item-card-' . $item['id'] . '" class="menu-item bg-zinc-900/90 border border-zinc-800/80 rounded-3xl p-3 flex flex-col justify-between transition-all active:scale-[0.98]" data-id="' . $item['id'] . '" data-price="' . $item['price'] . '" data-preptime="' . $prepTime . '" data-name="' . strtolower(htmlspecialchars($item['name'])) . '" data-rawname="' . addslashes(htmlspecialchars($item['name'])) . '" data-rawdesc="' . addslashes(htmlspecialchars($item['description'])) . '" data-description="' . strtolower(htmlspecialchars($item['description'])) . '">';
                             
-                            // Image container
                             echo '<div class="relative aspect-square w-full rounded-2xl bg-zinc-950 overflow-hidden mb-2.5 flex items-center justify-center text-4xl">';
                             if (!empty($item['image'])) {
                                 echo '<img src="images/' . htmlspecialchars($item['image']) . '" alt="' . htmlspecialchars($item['name']) . '" class="w-full h-full object-cover" loading="lazy" onerror="this.parentElement.innerHTML=\'🍽️\'">';
@@ -122,7 +132,6 @@
                             }
                             echo '</div>';
 
-                            // Food Info
                             echo '<div class="flex-1 flex flex-col mb-2">';
                             echo '<div class="flex items-center gap-1.5 mb-1">';
                             echo '<span class="w-3.5 h-3.5 rounded-sm border-2 ' . $dietary_color . ' flex items-center justify-center"><span class="w-1.5 h-1.5 rounded-full bg-white"></span></span>';
@@ -131,14 +140,12 @@
                             echo '<p class="text-xs text-zinc-400 line-clamp-2 mb-2">' . htmlspecialchars($item['description']) . '</p>';
                             echo '</div>';
 
-                            // Price & Action Button
-                            echo '<div class="mt-auto flex flex-col gap-2">';
+                            echo '<div class="mt-auto flex flex-col gap-2 action-container">';
                             echo '<span class="text-base font-black text-amber-400">Rs. ' . number_format($item['price'], 0) . '</span>';
-                            if (!$sold_out) {
-                                $prepTime = isset($item['preparation_time']) ? intval($item['preparation_time']) : 15;
-                                echo '<button onclick="openCustomModal(' . $item['id'] . ', \'' . addslashes(htmlspecialchars($item['name'])) . '\', ' . $item['price'] . ', \'' . addslashes(htmlspecialchars($item['description'])) . '\', ' . $prepTime . ')" class="h-11 w-full rounded-2xl bg-amber-500 hover:bg-amber-600 active:scale-95 text-zinc-950 font-black text-xs transition-all shadow-lg shadow-amber-500/10 flex items-center justify-center gap-1">+ Add</button>';
+                            if (!$out_of_stock) {
+                                echo '<button onclick="openCustomModal(' . $item['id'] . ', \'' . addslashes(htmlspecialchars($item['name'])) . '\', ' . $item['price'] . ', \'' . addslashes(htmlspecialchars($item['description'])) . '\', ' . $prepTime . ')" class="btn-add h-11 w-full rounded-2xl bg-amber-500 hover:bg-amber-600 active:scale-95 text-zinc-950 font-black text-xs transition-all shadow-lg shadow-amber-500/10 flex items-center justify-center gap-1">+ Add</button>';
                             } else {
-                                echo '<button disabled class="h-11 w-full rounded-2xl bg-zinc-800 text-zinc-500 font-bold text-xs">Sold Out</button>';
+                                echo '<button disabled class="btn-soldout h-11 w-full rounded-2xl bg-zinc-800 text-rose-400/80 font-bold text-xs">Out of stock</button>';
                             }
                             echo '</div>';
 
@@ -158,15 +165,20 @@
 
     </main>
 
+    <!-- FLOATING WAITER CALL BUTTON -->
+    <button onclick="callWaiter()" class="fixed bottom-20 right-4 z-40 w-14 h-14 rounded-full bg-amber-500 text-zinc-950 font-black text-2xl flex items-center justify-center shadow-2xl active:scale-90 transition-transform cursor-pointer border-2 border-amber-400/50" title="Call Waiter to Table">
+        🔔
+    </button>
+
     <!-- Persistent Floating Cart Bar -->
-    <div id="floatingCartBar" class="fixed bottom-20 left-4 right-4 z-40 max-w-md mx-auto bg-gradient-to-r from-amber-500 to-amber-600 text-zinc-950 p-4 rounded-3xl shadow-2xl flex items-center justify-between font-extrabold cursor-pointer active:scale-95 transition-all" style="display: none;" onclick="openCartPanel()">
-        <div class="flex items-center gap-2.5">
-            <span id="floatCartCount" class="bg-zinc-950 text-amber-400 w-7 h-7 rounded-full flex items-center justify-center text-xs font-black">0</span>
-            <span class="text-sm">Items in Cart</span>
-        </div>
+    <div id="floatingCartBar" class="fixed bottom-20 left-4 right-20 z-40 max-w-sm bg-gradient-to-r from-amber-500 to-amber-600 text-zinc-950 p-3.5 rounded-3xl shadow-2xl flex items-center justify-between font-extrabold cursor-pointer active:scale-95 transition-all" style="display: none;" onclick="openCartPanel()">
         <div class="flex items-center gap-2">
-            <span id="floatCartTotal" class="text-base font-black">Rs. 0</span>
-            <span class="text-xs bg-zinc-950/20 px-2.5 py-1 rounded-full">Checkout →</span>
+            <span id="floatCartCount" class="bg-zinc-950 text-amber-400 w-6 h-6 rounded-full flex items-center justify-center text-xs font-black">0</span>
+            <span class="text-xs">Cart</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+            <span id="floatCartTotal" class="text-sm font-black">Rs. 0</span>
+            <span class="text-[10px] bg-zinc-950/20 px-2 py-0.5 rounded-full">View →</span>
         </div>
     </div>
 
@@ -180,7 +192,6 @@
             <p class="text-xs text-zinc-400 text-center mb-3" id="customModalDesc">Description</p>
             <div class="text-center font-black text-amber-400 text-lg mb-4" id="customModalPrice">Rs. 0</div>
 
-            <!-- Customization Options -->
             <div class="space-y-4 mb-6 bg-zinc-950/50 p-4 rounded-2xl border border-zinc-800/60">
                 <div>
                     <h4 class="text-xs font-bold text-zinc-300 mb-2">🌶️ Spice Level</h4>
@@ -212,7 +223,6 @@
                 </div>
             </div>
 
-            <!-- Footer Controls -->
             <div class="flex items-center gap-3">
                 <div class="flex items-center gap-3 bg-zinc-950 border border-zinc-800 rounded-2xl p-1.5 px-3">
                     <button onclick="customModalChangeQty(-1)" class="w-8 h-8 rounded-xl bg-zinc-800 text-white font-black text-lg flex items-center justify-center active:bg-amber-500 active:text-zinc-950">−</button>
@@ -233,7 +243,19 @@
             <h3 class="text-lg font-black text-white">🛒 Your Cart</h3>
             <button class="cart-close bg-zinc-800 text-zinc-400 w-8 h-8 rounded-full flex items-center justify-center font-bold">✕</button>
         </div>
+
+        <!-- Tracker Link Inside Cart -->
+        <?php if ($active_order_id > 0): ?>
+            <div class="mb-4">
+                <a href="order-success.php?table=<?php echo urlencode($table_num); ?>&order_id=<?php echo $active_order_id; ?>" class="w-full p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 font-extrabold text-xs flex items-center justify-between active:scale-95 transition-all">
+                    <span>📋 Track Active Order #<?php echo $active_order_id; ?></span>
+                    <span>View Status →</span>
+                </a>
+            </div>
+        <?php endif; ?>
+
         <div class="cart-items flex-1 overflow-y-auto space-y-3 pr-1"></div>
+        
         <div class="pt-4 border-t border-zinc-800 mt-auto">
             <div class="flex justify-between items-center mb-4 text-base font-black">
                 <span class="text-zinc-400">Total Amount:</span>
@@ -245,25 +267,17 @@
         </div>
     </div>
 
-    <!-- Fixed Bottom Tab Bar -->
+    <!-- Fixed Customer Bottom Navigation Bar -->
     <nav class="fixed bottom-0 left-0 right-0 z-40 max-w-md mx-auto bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800/80 flex justify-around items-center h-16 rounded-t-2xl px-2">
-        <a href="menu.php?table=<?php echo urlencode($table_num); ?>" class="flex flex-col items-center gap-0.5 text-amber-500 font-extrabold text-[10px]">
+        <a href="menu.php?table=<?php echo urlencode($table_num); ?>" class="flex flex-col items-center gap-0.5 text-amber-500 font-extrabold text-xs">
             <span class="text-lg">🍽️</span>
             <span>Menu</span>
         </a>
-        <button onclick="openCartPanel()" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px] relative">
+        <button onclick="openCartPanel()" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-xs relative">
             <span class="text-lg">🛒</span>
             <span>Cart</span>
-            <span class="cart-badge absolute -top-1 right-1 bg-amber-500 text-zinc-950 font-black text-[9px] w-4 h-4 rounded-full flex items-center justify-center" style="display: none;">0</span>
+            <span class="cart-badge absolute -top-1 right-2 bg-amber-500 text-zinc-950 font-black text-[9px] w-4 h-4 rounded-full flex items-center justify-center" style="display: none;">0</span>
         </button>
-        <button onclick="callWaiter()" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
-            <span class="text-lg">🔔</span>
-            <span>Waiter</span>
-        </button>
-        <a href="order-success.php?table=<?php echo urlencode($table_num); ?>" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
-            <span class="text-lg">📋</span>
-            <span>Tracker</span>
-        </a>
     </nav>
 
     <script src="js/modern.js"></script>
@@ -298,7 +312,47 @@
                 floatBar.style.display = 'none';
             }
         }
-        document.addEventListener('DOMContentLoaded', updateFloatingCartBar);
+
+        // Live Stock Sync Polling
+        function pollLiveStockStatus() {
+            fetch('api/menu-status.php')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success && data.items) {
+                        data.items.forEach(item => {
+                            const card = document.getElementById('item-card-' + item.id);
+                            if (card) {
+                                const actionBox = card.querySelector('.action-container');
+                                if (actionBox) {
+                                    const rawName = card.dataset.rawname;
+                                    const rawDesc = card.dataset.rawdesc;
+                                    const price = card.dataset.price;
+                                    const prepTime = card.dataset.preptime;
+                                    const formattedPrice = formatPrice(price);
+
+                                    if (item.status === 'sold_out' || item.status === 'inactive') {
+                                        actionBox.innerHTML = `
+                                            <span class="text-base font-black text-amber-400">${formattedPrice}</span>
+                                            <button disabled class="btn-soldout h-11 w-full rounded-2xl bg-zinc-800 text-rose-400/80 font-bold text-xs">Out of stock</button>
+                                        `;
+                                    } else if (item.status === 'active') {
+                                        actionBox.innerHTML = `
+                                            <span class="text-base font-black text-amber-400">${formattedPrice}</span>
+                                            <button onclick="openCustomModal(${item.id}, '${rawName}', ${price}, '${rawDesc}', ${prepTime})" class="btn-add h-11 w-full rounded-2xl bg-amber-500 hover:bg-amber-600 active:scale-95 text-zinc-950 font-black text-xs transition-all shadow-lg shadow-amber-500/10 flex items-center justify-center gap-1">+ Add</button>
+                                        `;
+                                    }
+                                }
+                            }
+                        });
+                    }
+                })
+                .catch(err => console.error(err));
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updateFloatingCartBar();
+            setInterval(pollLiveStockStatus, 4000);
+        });
     </script>
 </body>
 </html>

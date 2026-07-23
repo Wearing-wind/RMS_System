@@ -1,12 +1,12 @@
 <?php
-// Admin Orders Management - Mobile Card Queue
+// Admin Live Orders - Tailwind Mobile Architecture
 require_once '../config.php';
 requireAdminLogin();
 
 $conn = getDBConnection();
 
 if ($conn === null) {
-    die("Database not connected.");
+    die("Database connection failed.");
 }
 
 $status_filter = isset($_GET['status']) ? sanitize($_GET['status']) : 'all';
@@ -28,63 +28,82 @@ if ($result) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full bg-zinc-950 text-zinc-100">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#0c0907">
+    <meta name="theme-color" content="#09090b">
     <title>Manage Orders - QR Cafe</title>
     <link rel="manifest" href="../manifest.json">
-    <link rel="stylesheet" href="../css/spatial.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              amber: {
+                500: '#f59e0b',
+                600: '#d97706',
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+        body { overscroll-behavior-y: contain; -webkit-tap-highlight-color: transparent; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
 </head>
-<body>
-    <!-- Mobile Header -->
-    <header class="header">
-        <div class="mobile-app-shell">
-            <a href="index.php" class="logo">
-                <span>📋</span> Manage Live Orders
+<body class="min-h-full pb-24 font-sans antialiased selection:bg-amber-500 selection:text-zinc-950">
+
+    <!-- Header -->
+    <header class="sticky top-0 z-40 bg-zinc-950/90 backdrop-blur-xl border-b border-zinc-800/80 px-4 py-3.5">
+        <div class="max-w-md mx-auto flex items-center justify-between gap-2">
+            <a href="index.php" class="flex items-center gap-2 font-black text-lg text-white">
+                <span>📋</span>
+                <span>Manage Live Orders</span>
             </a>
-            <a href="index.php" style="color: var(--primary); text-decoration: none; font-size: 0.8rem; font-weight: 700;">Dashboard →</a>
+            <a href="index.php" class="text-xs font-bold text-amber-400">Dashboard →</a>
         </div>
     </header>
 
-    <main class="mobile-app-shell" style="margin-top: 14px; margin-bottom: 20px;">
+    <main class="max-w-md mx-auto px-4 pt-3 space-y-4">
 
-        <!-- Admin Quick Nav Tabs -->
-        <div class="category-nav-scroll" style="margin-bottom: 14px;">
-            <a href="orders.php?status=all" class="category-btn <?php echo $status_filter === 'all' ? 'active' : ''; ?>">All Orders</a>
-            <a href="orders.php?status=new" class="category-btn <?php echo $status_filter === 'new' ? 'active' : ''; ?>">🆕 New</a>
-            <a href="orders.php?status=preparing" class="category-btn <?php echo $status_filter === 'preparing' ? 'active' : ''; ?>">🔥 Prep</a>
-            <a href="orders.php?status=ready" class="category-btn <?php echo $status_filter === 'ready' ? 'active' : ''; ?>">✅ Ready</a>
-            <a href="orders.php?status=completed" class="category-btn <?php echo $status_filter === 'completed' ? 'active' : ''; ?>">✔ Completed</a>
-            <a href="orders.php?status=cancelled" class="category-btn <?php echo $status_filter === 'cancelled' ? 'active' : ''; ?>">🚫 Cancelled</a>
-        </div>
+        <!-- Status Filter Segmented Carousel -->
+        <nav class="flex gap-2 overflow-x-auto no-scrollbar py-1">
+            <a href="orders.php?status=all" class="px-4 py-2 rounded-2xl font-bold text-xs whitespace-nowrap <?php echo $status_filter === 'all' ? 'bg-amber-500 text-zinc-950 font-black shadow-lg shadow-amber-500/20' : 'bg-zinc-900 border border-zinc-800 text-zinc-300'; ?>">All Orders</a>
+            <a href="orders.php?status=new" class="px-4 py-2 rounded-2xl font-bold text-xs whitespace-nowrap <?php echo $status_filter === 'new' ? 'bg-amber-500 text-zinc-950 font-black shadow-lg shadow-amber-500/20' : 'bg-zinc-900 border border-zinc-800 text-zinc-300'; ?>">🆕 New</a>
+            <a href="orders.php?status=preparing" class="px-4 py-2 rounded-2xl font-bold text-xs whitespace-nowrap <?php echo $status_filter === 'preparing' ? 'bg-amber-500 text-zinc-950 font-black shadow-lg shadow-amber-500/20' : 'bg-zinc-900 border border-zinc-800 text-zinc-300'; ?>">🔥 Prep</a>
+            <a href="orders.php?status=ready" class="px-4 py-2 rounded-2xl font-bold text-xs whitespace-nowrap <?php echo $status_filter === 'ready' ? 'bg-amber-500 text-zinc-950 font-black shadow-lg shadow-amber-500/20' : 'bg-zinc-900 border border-zinc-800 text-zinc-300'; ?>">✅ Ready</a>
+            <a href="orders.php?status=completed" class="px-4 py-2 rounded-2xl font-bold text-xs whitespace-nowrap <?php echo $status_filter === 'completed' ? 'bg-amber-500 text-zinc-950 font-black shadow-lg shadow-amber-500/20' : 'bg-zinc-900 border border-zinc-800 text-zinc-300'; ?>">✔ Completed</a>
+            <a href="orders.php?status=cancelled" class="px-4 py-2 rounded-2xl font-bold text-xs whitespace-nowrap <?php echo $status_filter === 'cancelled' ? 'bg-amber-500 text-zinc-950 font-black shadow-lg shadow-amber-500/20' : 'bg-zinc-900 border border-zinc-800 text-zinc-300'; ?>">🚫 Cancelled</a>
+        </nav>
 
-        <div style="display: flex; flex-direction: column; gap: 12px;">
+        <!-- Orders Stream Stack -->
+        <div class="space-y-3 mb-20">
             <?php if (empty($orders)): ?>
-                <div class="spatial-card" style="padding: 30px; text-align: center; color: var(--text-muted);">
-                    <div style="font-size: 2.5rem; margin-bottom: 6px;">📋</div>
-                    <h3>No orders found</h3>
+                <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 text-center text-zinc-500">
+                    <div class="text-3xl mb-2">📋</div>
+                    <h3 class="font-bold">No orders found</h3>
                 </div>
             <?php else: ?>
                 <?php foreach ($orders as $order): ?>
-                    <div class="spatial-card" style="padding: 14px; display: flex; flex-direction: column;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--glass-border); padding-bottom: 8px; margin-bottom: 8px;">
+                    <div class="bg-zinc-900/90 border border-zinc-800/80 rounded-3xl p-4 flex flex-col justify-between space-y-3">
+                        <div class="flex justify-between items-start pb-2 border-b border-zinc-800">
                             <div>
-                                <div style="font-weight: 800; font-size: 1rem; color: var(--text-primary);">Order #<?php echo $order['id']; ?></div>
-                                <div style="font-size: 0.75rem; color: var(--text-muted);">📍 Table <?php echo htmlspecialchars($order['table_number']); ?> • <?php echo htmlspecialchars($order['created_at']); ?></div>
+                                <div class="font-extrabold text-sm text-white">Order #<?php echo $order['id']; ?> • Table <?php echo htmlspecialchars($order['table_number']); ?></div>
+                                <div class="text-[11px] text-zinc-400"><?php echo htmlspecialchars($order['created_at']); ?></div>
                             </div>
-                            <span style="font-weight: 800; font-size: 0.72rem; text-transform: uppercase; padding: 2px 8px; border-radius: var(--radius-pill); background: rgba(217, 155, 38, 0.2); color: var(--primary); border: 1px solid var(--primary);">
-                                <?php echo htmlspecialchars($order['status']); ?>
-                            </span>
+                            <span class="px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 font-extrabold text-[10px] uppercase"><?php echo htmlspecialchars($order['status']); ?></span>
                         </div>
 
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-                            <div style="font-size: 0.95rem; font-weight: 800; color: var(--primary);">
+                        <div class="flex justify-between items-center pt-1">
+                            <div class="text-sm font-black text-amber-400">
                                 Total: Rs. <?php echo number_format($order['total_amount'] ?? 0, 2); ?>
                             </div>
-
-                            <a href="order-details.php?id=<?php echo $order['id']; ?>" class="add-to-cart-btn" style="padding: 6px 14px; font-size: 0.78rem;">
+                            <a href="order-details.php?id=<?php echo $order['id']; ?>" class="px-4 py-2 rounded-2xl bg-amber-500 text-zinc-950 font-black text-xs active:scale-95 shadow-lg shadow-amber-500/10">
                                 View & Edit →
                             </a>
                         </div>
@@ -95,23 +114,23 @@ if ($result) {
 
     </main>
 
-    <!-- PINNED MOBILE BOTTOM NAVIGATION BAR FOR ADMIN -->
-    <nav class="mobile-nav-bar">
-        <a href="index.php" class="mobile-nav-item">
-            <span class="mobile-nav-icon">📊</span>
+    <!-- Manager Bottom Navigation Bar -->
+    <nav class="fixed bottom-0 left-0 right-0 z-40 max-w-md mx-auto bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800/80 flex justify-around items-center h-16 rounded-t-2xl px-2">
+        <a href="index.php" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
+            <span class="text-lg">📊</span>
             <span>Summary</span>
         </a>
-        <a href="orders.php" class="mobile-nav-item active">
-            <span class="mobile-nav-icon">📋</span>
+        <a href="orders.php" class="flex flex-col items-center gap-0.5 text-amber-500 font-extrabold text-[10px]">
+            <span class="text-lg">📋</span>
             <span>Orders</span>
         </a>
-        <a href="menu-items.php" class="mobile-nav-item">
-            <span class="mobile-nav-icon">🍔</span>
+        <a href="menu-items.php" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
+            <span class="text-lg">🍔</span>
             <span>Items</span>
         </a>
-        <a href="../kitchen-dashboard.php" class="mobile-nav-item">
-            <span class="mobile-nav-icon">👨‍🍳</span>
-            <span>KDS</span>
+        <a href="tables.php" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
+            <span class="text-lg">📍</span>
+            <span>Tables</span>
         </a>
     </nav>
 

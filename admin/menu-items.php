@@ -1,37 +1,15 @@
 <?php
-// Admin Menu Items Management - Mobile First & Instant Availability Toggle
+// Admin Menu Items Management - Tailwind Mobile Architecture
 require_once '../config.php';
 requireAdminLogin();
 
 $conn = getDBConnection();
 
 if ($conn === null) {
-    die("Database not connected.");
+    die("Database connection failed.");
 }
 
-// Handle AJAX Instant Toggle Switch Request
-if (isset($_GET['action']) && $_GET['action'] === 'toggle_status') {
-    header('Content-Type: application/json');
-    $id = intval($_GET['id']);
-    $new_status = sanitize($_GET['status']);
-    
-    if ($id > 0 && in_array($new_status, ['active', 'sold_out', 'inactive'])) {
-        $stmt = $conn->prepare("UPDATE menu_items SET status = ? WHERE id = ?");
-        $stmt->bind_param("si", $new_status, $id);
-        if ($stmt->execute()) {
-            echo json_encode(['success' => true, 'status' => $new_status]);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Failed to update status']);
-        }
-        $stmt->close();
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Invalid parameters']);
-    }
-    $conn->close();
-    exit;
-}
-
-// Handle standard form submissions
+// Handle Add/Delete Item Form
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action'])) {
         if ($_POST['action'] === 'add') {
@@ -56,7 +34,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->bind_param("ssdsiss", $name, $description, $price, $image, $category_id, $status, $dietary_type);
             $stmt->execute();
             $stmt->close();
-            
             $_SESSION['success'] = 'Item added successfully';
         } elseif ($_POST['action'] === 'delete') {
             $id = intval($_POST['id']);
@@ -71,7 +48,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-// Get categories & items
 $categories_res = $conn->query("SELECT * FROM categories ORDER BY name");
 $categories = [];
 while ($cat = $categories_res->fetch_assoc()) {
@@ -85,178 +61,202 @@ while ($item = $items_res->fetch_assoc()) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full bg-zinc-950 text-zinc-100">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#0c0907">
+    <meta name="theme-color" content="#09090b">
     <title>Menu Items Manager - QR Cafe</title>
     <link rel="manifest" href="../manifest.json">
-    <link rel="stylesheet" href="../css/spatial.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              amber: {
+                500: '#f59e0b',
+                600: '#d97706',
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+        body { overscroll-behavior-y: contain; -webkit-tap-highlight-color: transparent; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
 </head>
-<body>
-    <!-- Mobile Header -->
-    <header class="header">
-        <div class="mobile-app-shell">
-            <a href="index.php" class="logo">
-                <span>🍔</span> Menu Items Manager
+<body class="min-h-full pb-24 font-sans antialiased selection:bg-amber-500 selection:text-zinc-950">
+
+    <!-- Header -->
+    <header class="sticky top-0 z-40 bg-zinc-950/90 backdrop-blur-xl border-b border-zinc-800/80 px-4 py-3.5">
+        <div class="max-w-md mx-auto flex items-center justify-between gap-2">
+            <a href="index.php" class="flex items-center gap-2 font-black text-lg text-white">
+                <span>🍔</span>
+                <span>Menu Inventory</span>
             </a>
-            <button onclick="document.getElementById('addItemFormCard').scrollIntoView({behavior:'smooth'})" class="add-to-cart-btn" style="padding: 6px 12px; font-size: 0.78rem;">
+            <button onclick="document.getElementById('addItemCard').scrollIntoView({behavior:'smooth'})" class="px-3 py-1.5 rounded-full bg-amber-500 text-zinc-950 font-black text-xs">
                 + Add Item
             </button>
         </div>
     </header>
 
-    <main class="mobile-app-shell" style="margin-top: 14px; margin-bottom: 20px;">
+    <main class="max-w-md mx-auto px-4 pt-3 space-y-4">
 
-        <!-- Admin Quick Nav Tabs -->
-        <div class="category-nav-scroll" style="margin-bottom: 14px;">
-            <a href="index.php" class="category-btn">📊 Dashboard</a>
-            <a href="menu-items.php" class="category-btn active">🍔 Menu Items</a>
-            <a href="orders.php" class="category-btn">📋 All Orders</a>
-            <a href="tables.php" class="category-btn">📍 Tables</a>
-        </div>
+        <!-- Navigation Carousel -->
+        <nav class="flex gap-2 overflow-x-auto no-scrollbar py-1">
+            <a href="index.php" class="px-4 py-2.5 rounded-2xl font-bold text-xs bg-zinc-900 border border-zinc-800 text-zinc-300 whitespace-nowrap">📊 Dashboard</a>
+            <a href="menu-items.php" class="px-4 py-2.5 rounded-2xl font-black text-xs bg-amber-500 text-zinc-950 shadow-lg shadow-amber-500/20 whitespace-nowrap">🍔 Menu Items</a>
+            <a href="orders.php" class="px-4 py-2.5 rounded-2xl font-bold text-xs bg-zinc-900 border border-zinc-800 text-zinc-300 whitespace-nowrap">📋 Live Orders</a>
+            <a href="tables.php" class="px-4 py-2.5 rounded-2xl font-bold text-xs bg-zinc-900 border border-zinc-800 text-zinc-300 whitespace-nowrap">📍 Tables</a>
+            <a href="categories.php" class="px-4 py-2.5 rounded-2xl font-bold text-xs bg-zinc-900 border border-zinc-800 text-zinc-300 whitespace-nowrap">🏷️ Categories</a>
+            <a href="payment-settings.php" class="px-4 py-2.5 rounded-2xl font-bold text-xs bg-zinc-900 border border-zinc-800 text-zinc-300 whitespace-nowrap">💳 Payment QR</a>
+        </nav>
 
         <?php if (isset($_SESSION['success'])): ?>
-            <div style="background: rgba(34, 197, 94, 0.15); border: 1px solid var(--success); color: #4ade80; padding: 10px; border-radius: var(--radius-sm); margin-bottom: 14px; font-size: 0.85rem;">
+            <div class="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold">
                 <?php echo $_SESSION['success']; unset($_SESSION['success']); ?>
             </div>
         <?php endif; ?>
 
-        <h3 style="font-size: 1rem; font-weight: 800; font-family: var(--font-serif); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
-            <span>Instant Stock Toggle</span>
-            <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 400;">Tap switch to toggle Sold Out / Active</span>
-        </h3>
+        <!-- Item Cards with Instant Stock Switch -->
+        <section class="space-y-3">
+            <h3 class="text-xs font-extrabold text-zinc-400 uppercase tracking-wider">Instant Stock Control (Tap Switch)</h3>
 
-        <!-- Mobile Cards List View (Replaces Wide Desktop Table) -->
-        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px;">
             <?php foreach ($items as $item): ?>
-                <?php 
-                $is_active = ($item['status'] === 'active');
-                $dietary = strtolower($item['dietary_type'] ?? 'veg');
-                $dietary_tag = ($dietary === 'non-veg') ? '<span class="dietary-tag non-veg"></span>' : '<span class="dietary-tag veg"></span>';
-                ?>
-                <div class="menu-item" id="item-card-<?php echo $item['id']; ?>">
-                    <div class="menu-item-image">
-                        <?php if (!empty($item['image'])): ?>
-                            <img src="../images/<?php echo htmlspecialchars($item['image']); ?>" alt="item" onerror="this.parentElement.innerHTML='🍽️'">
-                        <?php else: ?>
-                            🍽️
-                        <?php endif; ?>
-                    </div>
-                    
-                    <div class="menu-item-content">
-                        <div class="menu-item-name">
-                            <?php echo $dietary_tag; ?> <?php echo htmlspecialchars($item['name']); ?>
+                <?php $is_active = ($item['status'] === 'active'); ?>
+                <div class="bg-zinc-900/90 border border-zinc-800/80 rounded-3xl p-3.5 flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-12 h-12 rounded-2xl bg-zinc-950 border border-zinc-800 overflow-hidden flex items-center justify-center text-2xl shrink-0">
+                            <?php if (!empty($item['image'])): ?>
+                                <img src="../images/<?php echo htmlspecialchars($item['image']); ?>" alt="img" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='🍽️'">
+                            <?php else: ?>
+                                🍽️
+                            <?php endif; ?>
                         </div>
-                        <div style="font-size: 0.76rem; color: var(--text-muted);">
-                            Category: <?php echo htmlspecialchars($categories[$item['category_id']] ?? 'General'); ?>
-                        </div>
-                        <div class="menu-item-price" style="margin-top: 4px;">
-                            Rs. <?php echo number_format($item['price'], 0); ?>
+                        <div class="min-w-0">
+                            <h4 class="font-extrabold text-sm text-white truncate"><?php echo htmlspecialchars($item['name']); ?></h4>
+                            <div class="text-[11px] text-zinc-400"><?php echo htmlspecialchars($categories[$item['category_id']] ?? 'General'); ?></div>
+                            <div class="text-xs font-black text-amber-400 mt-0.5">Rs. <?php echo number_format($item['price'], 0); ?></div>
                         </div>
                     </div>
 
-                    <!-- Instant Toggle Switch Cell -->
-                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
-                        <label class="toggle-switch" title="Toggle Item Availability">
-                            <input type="checkbox" <?php echo $is_active ? 'checked' : ''; ?> onchange="toggleItemAvailability(<?php echo $item['id']; ?>, this.checked)">
-                            <span class="toggle-slider"></span>
-                        </label>
-                        <span id="status-label-<?php echo $item['id']; ?>" style="font-size: 0.7rem; font-weight: 800; color: <?php echo $is_active ? 'var(--success)' : 'var(--danger)'; ?>;">
-                            <?php echo $is_active ? 'Available' : 'Sold Out'; ?>
-                        </span>
+                    <div class="flex items-center gap-3 shrink-0">
+                        <div class="text-right">
+                            <span id="stock-lbl-<?php echo $item['id']; ?>" class="text-[10px] font-black block <?php echo $is_active ? 'text-emerald-400' : 'text-rose-400'; ?>">
+                                <?php echo $is_active ? 'In Stock' : 'Out of Stock'; ?>
+                            </span>
+                            <label class="relative inline-flex items-center cursor-pointer mt-1">
+                                <input type="checkbox" <?php echo $is_active ? 'checked' : ''; ?> onchange="toggleItemStock(<?php echo $item['id']; ?>, this.checked)" class="sr-only peer">
+                                <div class="w-11 h-6 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                            </label>
+                        </div>
+                        <form method="POST" onsubmit="return confirm('Delete this item?')">
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
+                            <button type="submit" class="text-xs text-rose-400 font-bold p-1">🗑️</button>
+                        </form>
                     </div>
                 </div>
             <?php endforeach; ?>
-        </div>
+        </section>
 
         <!-- Add Item Form Card -->
-        <div class="spatial-card" id="addItemFormCard" style="padding: 16px;">
-            <h3 style="font-size: 1.05rem; font-weight: 800; font-family: var(--font-serif); margin-bottom: 12px;">+ Add New Menu Item</h3>
-            <form method="POST" enctype="multipart/form-data">
+        <section id="addItemCard" class="bg-zinc-900/90 border border-zinc-800/80 rounded-3xl p-5 shadow-2xl mb-20 space-y-4">
+            <h3 class="text-base font-black text-white flex items-center gap-2">
+                <span>➕</span> Add New Menu Item
+            </h3>
+
+            <form method="POST" enctype="multipart/form-data" class="space-y-3">
                 <input type="hidden" name="action" value="add">
-                
-                <div style="margin-bottom: 10px;">
-                    <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px;">Item Name</label>
-                    <input type="text" name="name" required style="width: 100%; background: rgba(14,11,8,0.8); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); padding: 10px; color: white; font-family: inherit; font-size: 0.88rem; outline: none;">
+
+                <div>
+                    <label class="block text-xs font-bold text-zinc-300 mb-1">Item Name</label>
+                    <input type="text" name="name" required placeholder="e.g. Artisanal Cappuccino" class="w-full h-12 bg-zinc-950 border border-zinc-800 rounded-2xl px-4 text-sm text-white placeholder-zinc-500 outline-none focus:border-amber-500">
                 </div>
 
-                <div style="margin-bottom: 10px;">
-                    <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px;">Category</label>
-                    <select name="category_id" required style="width: 100%; background: rgba(14,11,8,0.8); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); padding: 10px; color: white; font-family: inherit; font-size: 0.88rem; outline: none;">
+                <div>
+                    <label class="block text-xs font-bold text-zinc-300 mb-1">Category</label>
+                    <select name="category_id" required class="w-full h-12 bg-zinc-950 border border-zinc-800 rounded-2xl px-4 text-sm text-white outline-none focus:border-amber-500">
                         <?php foreach ($categories as $cat_id => $cat_name): ?>
                             <option value="<?php echo $cat_id; ?>"><?php echo htmlspecialchars($cat_name); ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
 
-                <div style="margin-bottom: 10px; display: flex; gap: 10px;">
-                    <div style="flex: 1;">
-                        <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px;">Price (Rs.)</label>
-                        <input type="number" step="0.01" name="price" required style="width: 100%; background: rgba(14,11,8,0.8); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); padding: 10px; color: white; font-family: inherit; font-size: 0.88rem; outline: none;">
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs font-bold text-zinc-300 mb-1">Price (Rs.)</label>
+                        <input type="number" step="0.01" name="price" required placeholder="250" class="w-full h-12 bg-zinc-950 border border-zinc-800 rounded-2xl px-4 text-sm text-white outline-none focus:border-amber-500">
                     </div>
-                    <div style="flex: 1;">
-                        <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px;">Dietary</label>
-                        <select name="dietary_type" style="width: 100%; background: rgba(14,11,8,0.8); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); padding: 10px; color: white; font-family: inherit; font-size: 0.88rem; outline: none;">
-                            <option value="veg">Vegetarian</option>
+                    <div>
+                        <label class="block text-xs font-bold text-zinc-300 mb-1">Dietary</label>
+                        <select name="dietary_type" class="w-full h-12 bg-zinc-950 border border-zinc-800 rounded-2xl px-4 text-sm text-white outline-none focus:border-amber-500">
+                            <option value="veg">Veg</option>
                             <option value="non-veg">Non-Veg</option>
                         </select>
                     </div>
                 </div>
 
-                <div style="margin-bottom: 14px;">
-                    <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px;">Description</label>
-                    <textarea name="description" rows="2" style="width: 100%; background: rgba(14,11,8,0.8); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); padding: 10px; color: white; font-family: inherit; font-size: 0.88rem; outline: none;"></textarea>
+                <div>
+                    <label class="block text-xs font-bold text-zinc-300 mb-1">Description</label>
+                    <textarea name="description" rows="2" placeholder="Brief description..." class="w-full bg-zinc-950 border border-zinc-800 rounded-2xl p-3.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-amber-500 resize-none"></textarea>
                 </div>
 
-                <button type="submit" class="checkout-btn" style="padding: 12px;">Save Menu Item</button>
+                <button type="submit" class="h-12 w-full rounded-2xl bg-amber-500 text-zinc-950 font-black text-sm flex items-center justify-center active:scale-95 shadow-lg shadow-amber-500/20">
+                    Save Menu Item
+                </button>
             </form>
-        </div>
+        </section>
 
     </main>
 
-    <!-- PINNED MOBILE BOTTOM NAVIGATION BAR FOR ADMIN -->
-    <nav class="mobile-nav-bar">
-        <a href="index.php" class="mobile-nav-item">
-            <span class="mobile-nav-icon">📊</span>
+    <!-- Manager Bottom Navigation Bar -->
+    <nav class="fixed bottom-0 left-0 right-0 z-40 max-w-md mx-auto bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800/80 flex justify-around items-center h-16 rounded-t-2xl px-2">
+        <a href="index.php" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
+            <span class="text-lg">📊</span>
             <span>Summary</span>
         </a>
-        <a href="orders.php" class="mobile-nav-item">
-            <span class="mobile-nav-icon">📋</span>
+        <a href="orders.php" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
+            <span class="text-lg">📋</span>
             <span>Orders</span>
         </a>
-        <a href="menu-items.php" class="mobile-nav-item active">
-            <span class="mobile-nav-icon">🍔</span>
+        <a href="menu-items.php" class="flex flex-col items-center gap-0.5 text-amber-500 font-extrabold text-[10px]">
+            <span class="text-lg">🍔</span>
             <span>Items</span>
         </a>
-        <a href="../kitchen-dashboard.php" class="mobile-nav-item">
-            <span class="mobile-nav-icon">👨‍🍳</span>
-            <span>KDS</span>
+        <a href="tables.php" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
+            <span class="text-lg">📍</span>
+            <span>Tables</span>
         </a>
     </nav>
 
     <script src="../js/modern.js"></script>
     <script>
-        // Instant Availability Toggle Switch Handler
-        function toggleItemAvailability(itemId, isChecked) {
+        function toggleItemStock(itemId, isChecked) {
             const status = isChecked ? 'active' : 'sold_out';
-            const label = document.getElementById('status-label-' + itemId);
-            
-            fetch('menu-items.php?action=toggle_status&id=' + itemId + '&status=' + status)
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) {
-                        if (label) {
-                            label.textContent = isChecked ? 'Available' : 'Sold Out';
-                            label.style.color = isChecked ? 'var(--success)' : 'var(--danger)';
-                        }
-                        showToast(isChecked ? 'Item marked Available!' : 'Item marked Sold Out!', isChecked ? 'success' : 'warning');
-                    } else {
-                        showToast('Error updating item availability', 'error');
+            const label = document.getElementById('stock-lbl-' + itemId);
+            fetch('../api/toggle-stock.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: itemId, status: status })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    if (label) {
+                        label.textContent = isChecked ? 'In Stock' : 'Out of Stock';
+                        label.className = 'text-[10px] font-black block ' + (isChecked ? 'text-emerald-400' : 'text-rose-400');
                     }
-                })
-                .catch(err => console.error(err));
+                    showToast(isChecked ? 'Item marked In Stock!' : 'Item marked Out of Stock!', isChecked ? 'success' : 'warning');
+                } else {
+                    showToast(data.message || 'Failed to update stock status', 'error');
+                }
+            })
+            .catch(err => console.error(err));
         }
     </script>
 </body>

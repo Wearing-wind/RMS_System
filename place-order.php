@@ -1,5 +1,5 @@
 <?php
-// Place Order - Process and save order to database
+// Place Order - Process and save order to database with Stock Validation
 require_once 'config.php';
 
 $conn = getDBConnection();
@@ -56,6 +56,24 @@ if (empty($cart)) {
     exit;
 }
 
+// Validate Stock Availability for each cart item
+foreach ($cart as $item) {
+    $item_id = intval($item['id']);
+    $item_check = $conn->query("SELECT status, name FROM menu_items WHERE id = $item_id");
+    if ($item_check && $row_st = $item_check->fetch_assoc()) {
+        if ($row_st['status'] === 'sold_out' || $row_st['status'] === 'inactive') {
+            if ($is_ajax) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => "Item '" . $row_st['name'] . "' is currently Sold Out and cannot be ordered."]);
+                exit;
+            }
+            $_SESSION['error'] = "Item '" . $row_st['name'] . "' is currently Sold Out.";
+            header('Location: cart.php?table=' . urlencode($table_number));
+            exit;
+        }
+    }
+}
+
 // Calculate total & format item customization note
 $total = 0;
 $formatted_cart = [];
@@ -89,7 +107,7 @@ try {
     $stmt = $conn->prepare("INSERT INTO orders (table_number, customer_name, notes, status, total_amount, payment_status) VALUES (?, ?, ?, 'new', ?, 'pending')");
     
     if (!$stmt) {
-        // Fallback query if total_amount column is somehow missing
+        // Fallback query if total_amount column is missing
         $stmt = $conn->prepare("INSERT INTO orders (table_number, customer_name, notes, status) VALUES (?, ?, ?, 'new')");
         if (!$stmt) {
             throw new Exception("Database prepare error: " . $conn->error);
@@ -98,44 +116,57 @@ try {
     } else {
         $stmt->bind_param("sssd", $table_number, $customer_name, $notes, $total);
     }
-
-    $stmt->execute();
+    
+    if (!$stmt->execute()) {
+        throw new Exception("Order insertion failed: " . $stmt->error);
+    }
+    
     $order_id = $conn->insert_id;
     $stmt->close();
     
     // Insert order items
     $item_stmt = $conn->prepare("INSERT INTO order_items (order_id, menu_item_id, quantity, price) VALUES (?, ?, ?, ?)");
     if (!$item_stmt) {
-        throw new Exception("Failed to prepare order items insert: " . $conn->error);
+        throw new Exception("Item prepare error: " . $conn->error);
     }
-
+    
     foreach ($cart as $item) {
-        $item_id = intval($item['id']);
+        $menu_item_id = intval($item['id']);
         $quantity = intval($item['quantity']);
         $price = floatval($item['price']);
         
-        $item_stmt->bind_param("iiid", $order_id, $item_id, $quantity, $price);
-        $item_stmt->execute();
+        $item_stmt->bind_param("iiid", $order_id, $menu_item_id, $quantity, $price);
+        if (!$item_stmt->execute()) {
+            throw new Exception("Item insertion failed: " . $item_stmt->error);
+        }
     }
-    
     $item_stmt->close();
+    
+    // Commit transaction
     $conn->commit();
     
-    $order_details = [
+    // Save order session for tracker
+    $_SESSION['last_order'] = [
         'id' => $order_id,
         'table_number' => $table_number,
         'customer_name' => $customer_name,
-        'notes' => $notes,
-        'items' => $formatted_cart,
         'total' => $total,
-        'payment_status' => 'pending'
+        'status' => 'new',
+        'items' => $formatted_cart
     ];
-    
-    $_SESSION['last_order'] = $order_details;
     
     if ($is_ajax) {
         header('Content-Type: application/json');
-        echo json_encode(['success' => true, 'order_id' => $order_id, 'order' => $order_details]);
+        echo json_encode([
+            'success' => true,
+            'message' => 'Order placed successfully',
+            'order_id' => $order_id,
+            'order' => [
+                'id' => $order_id,
+                'table_number' => $table_number,
+                'total' => $total
+            ]
+        ]);
         exit;
     }
     
@@ -144,15 +175,17 @@ try {
     
 } catch (Exception $e) {
     $conn->rollback();
+    
     if ($is_ajax) {
         header('Content-Type: application/json');
         echo json_encode(['success' => false, 'message' => 'Failed to place order: ' . $e->getMessage()]);
         exit;
     }
+    
     $_SESSION['error'] = 'Failed to place order: ' . $e->getMessage();
     header('Location: checkout.php?table=' . urlencode($table_number));
     exit;
+} finally {
+    $conn->close();
 }
-
-$conn->close();
 ?>

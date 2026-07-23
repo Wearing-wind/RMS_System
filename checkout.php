@@ -1,89 +1,114 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full bg-zinc-950 text-zinc-100">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#09090b">
     <title>Checkout - QR Cafe</title>
-    <link rel="stylesheet" href="css/spatial.css">
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              amber: {
+                500: '#f59e0b',
+                600: '#d97706',
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+        body { overscroll-behavior-y: contain; -webkit-tap-highlight-color: transparent; }
+    </style>
 </head>
-<body>
-    <!-- Mobile Header Bar -->
-    <header class="header">
-        <div class="mobile-app-shell">
-            <a href="menu.php<?php echo isset($_GET['table']) ? '?table=' . urlencode($_GET['table']) : ''; ?>" class="logo">
+<body class="min-h-full pb-24 font-sans antialiased selection:bg-amber-500 selection:text-zinc-950">
+
+    <?php
+    $table_num = isset($_GET['table']) ? htmlspecialchars($_GET['table']) : '1';
+    ?>
+
+    <!-- Sticky Mobile Header -->
+    <header class="sticky top-0 z-40 bg-zinc-950/90 backdrop-blur-xl border-b border-zinc-800/80 px-4 py-3.5">
+        <div class="max-w-md mx-auto flex items-center justify-between gap-3">
+            <a href="menu.php?table=<?php echo urlencode($table_num); ?>" class="flex items-center gap-2 text-lg font-black text-white">
                 <span>☕</span> QR Cafe & Dining
             </a>
-            <span class="table-badge">📍 Table <?php echo isset($_GET['table']) ? htmlspecialchars($_GET['table']) : '1'; ?></span>
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 font-bold text-xs">
+                📍 Table <?php echo $table_num; ?>
+            </span>
         </div>
     </header>
 
-    <!-- Checkout Mobile Shell Container -->
-    <main class="mobile-app-shell" style="margin-top: 14px; margin-bottom: 20px;">
-        <div class="spatial-card" style="padding: 20px 16px;">
-            <h1 style="font-size: 1.4rem; font-weight: 800; margin-bottom: 16px; font-family: var(--font-serif);">Confirm & Place Order</h1>
+    <main class="max-w-md mx-auto px-4 pt-4">
+        <div class="bg-zinc-900/90 border border-zinc-800 rounded-3xl p-5 shadow-2xl">
+            <h1 class="text-xl font-black text-white mb-4">Confirm & Place Order</h1>
 
-            <!-- Empty Cart Alert -->
-            <div id="emptyCheckoutAlert" style="display: none; text-align: center; padding: 30px 10px;">
-                <div style="font-size: 3.5rem; margin-bottom: 10px;">🛒</div>
-                <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 6px;">Your cart is empty</h3>
-                <p style="color: var(--text-muted); font-size: 0.82rem; margin-bottom: 18px;">Please add items to your cart before proceeding to checkout.</p>
-                <a href="menu.php<?php echo isset($_GET['table']) ? '?table=' . urlencode($_GET['table']) : ''; ?>" class="checkout-btn" style="display: block; width: 100%; padding: 12px;">
+            <!-- Empty Cart Warning -->
+            <div id="emptyCheckoutAlert" style="display: none;" class="text-center py-10 space-y-3">
+                <div class="text-5xl">🛒</div>
+                <h3 class="text-base font-extrabold text-white">Your cart is empty</h3>
+                <p class="text-xs text-zinc-400">Please add items to your cart before proceeding.</p>
+                <a href="menu.php?table=<?php echo urlencode($table_num); ?>" class="h-12 w-full rounded-2xl bg-amber-500 text-zinc-950 font-black text-sm flex items-center justify-center active:scale-95 shadow-lg shadow-amber-500/20">
                     Browse Menu
                 </a>
             </div>
 
-            <!-- Form Container -->
-            <form id="spatialCheckoutForm">
-                <input type="hidden" id="table_number" value="<?php echo isset($_GET['table']) ? htmlspecialchars($_GET['table']) : '1'; ?>">
+            <!-- Checkout Form -->
+            <form id="spatialCheckoutForm" class="space-y-4">
+                <input type="hidden" id="table_number" value="<?php echo $table_num; ?>">
 
-                <div style="margin-bottom: 14px;">
-                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px;">Table Number</label>
-                    <div style="background: rgba(255, 255, 255, 0.04); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); padding: 10px 14px; font-weight: 800; font-size: 0.95rem; color: var(--primary);">
-                        📍 Table <?php echo isset($_GET['table']) ? htmlspecialchars($_GET['table']) : '1'; ?>
+                <div>
+                    <label class="block text-xs font-bold text-zinc-300 mb-1.5">Table Number</label>
+                    <div class="w-full bg-zinc-950 border border-zinc-800 rounded-2xl p-3.5 font-black text-sm text-amber-400">
+                        📍 Table <?php echo $table_num; ?>
                     </div>
                 </div>
 
-                <div style="margin-bottom: 14px;">
-                    <label for="customer_name" style="display: block; font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px;">Customer Name (Optional)</label>
-                    <input type="text" id="customer_name" placeholder="Enter your name" style="width: 100%; background: rgba(14, 11, 8, 0.8); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); padding: 10px 14px; color: white; font-family: inherit; font-size: 0.9rem; outline: none;">
+                <div>
+                    <label for="customer_name" class="block text-xs font-bold text-zinc-300 mb-1.5">Customer Name (Optional)</label>
+                    <input type="text" id="customer_name" placeholder="Enter your name" class="w-full h-12 bg-zinc-950 border border-zinc-800 rounded-2xl px-4 text-sm text-white placeholder-zinc-500 outline-none focus:border-amber-500 transition-all">
                 </div>
 
-                <div style="margin-bottom: 16px;">
-                    <label for="notes" style="display: block; font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px;">Kitchen Instructions (Optional)</label>
-                    <textarea id="notes" placeholder="e.g. Less sugar, extra napkin" rows="2" style="width: 100%; background: rgba(14, 11, 8, 0.8); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); padding: 10px 14px; color: white; font-family: inherit; font-size: 0.88rem; outline: none; resize: vertical;"></textarea>
+                <div>
+                    <label for="notes" class="block text-xs font-bold text-zinc-300 mb-1.5">Kitchen Instructions (Optional)</label>
+                    <textarea id="notes" placeholder="e.g. Less sugar, extra napkin" rows="2" class="w-full bg-zinc-950 border border-zinc-800 rounded-2xl p-3.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-amber-500 transition-all resize-none"></textarea>
                 </div>
 
-                <div style="margin-bottom: 18px;">
-                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">Order Summary</label>
-                    <div id="checkoutOrderSummary" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: 12px;">
-                        <!-- Items rendered by JS -->
+                <div>
+                    <label class="block text-xs font-bold text-zinc-300 mb-1.5">Order Summary</label>
+                    <div id="checkoutOrderSummary" class="bg-zinc-950/80 border border-zinc-800 rounded-2xl p-4 space-y-2">
+                        <!-- Rendered by JS -->
                     </div>
                 </div>
 
-                <button type="submit" id="placeOrderBtn" class="checkout-btn">
+                <button type="submit" id="placeOrderBtn" class="h-12 w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-zinc-950 font-black text-sm active:scale-95 shadow-lg shadow-amber-500/20">
                     Place Order • <span id="checkoutTotalText">Rs. 0</span>
                 </button>
             </form>
         </div>
     </main>
 
-    <!-- PINNED MOBILE BOTTOM NAVIGATION BAR -->
-    <nav class="mobile-nav-bar">
-        <a href="menu.php<?php echo isset($_GET['table']) ? '?table=' . urlencode($_GET['table']) : ''; ?>" class="mobile-nav-item">
-            <span class="mobile-nav-icon">🍽️</span>
+    <!-- Fixed Bottom Tab Bar -->
+    <nav class="fixed bottom-0 left-0 right-0 z-40 max-w-md mx-auto bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800/80 flex justify-around items-center h-16 rounded-t-2xl px-2">
+        <a href="menu.php?table=<?php echo urlencode($table_num); ?>" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
+            <span class="text-lg">🍽️</span>
             <span>Menu</span>
         </a>
-        <a href="cart.php<?php echo isset($_GET['table']) ? '?table=' . urlencode($_GET['table']) : ''; ?>" class="mobile-nav-item active">
-            <span class="mobile-nav-icon">🛒</span>
+        <a href="cart.php?table=<?php echo urlencode($table_num); ?>" class="flex flex-col items-center gap-0.5 text-amber-500 font-extrabold text-[10px]">
+            <span class="text-lg">🛒</span>
             <span>Cart</span>
-            <span class="mobile-nav-badge cart-badge" style="display: none;">0</span>
+            <span class="cart-badge absolute top-1 right-2 bg-amber-500 text-zinc-950 font-black text-[9px] w-4 h-4 rounded-full flex items-center justify-center" style="display: none;">0</span>
         </a>
-        <button class="mobile-nav-item" onclick="callWaiter()">
-            <span class="mobile-nav-icon">🔔</span>
+        <button onclick="callWaiter()" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
+            <span class="text-lg">🔔</span>
             <span>Waiter</span>
         </button>
-        <a href="order-success.php<?php echo isset($_GET['table']) ? '?table=' . urlencode($_GET['table']) : ''; ?>" class="mobile-nav-item">
-            <span class="mobile-nav-icon">📋</span>
+        <a href="order-success.php?table=<?php echo urlencode($table_num); ?>" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
+            <span class="text-lg">📋</span>
             <span>Tracker</span>
         </a>
     </nav>
@@ -105,7 +130,7 @@
             if (form) form.style.display = 'block';
             if (alertView) alertView.style.display = 'none';
 
-            let itemsHTML = '<div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px;">';
+            let itemsHTML = '<div class="space-y-2 mb-3 pb-3 border-b border-zinc-800">';
             cart.forEach(item => {
                 let customText = '';
                 if (item.customizations) {
@@ -117,20 +142,20 @@
                 }
 
                 itemsHTML += `
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <div class="flex justify-between items-center text-xs">
                         <div>
-                            <div style="font-weight: 700; color: var(--text-primary); font-size: 0.88rem;">${item.name} x ${item.quantity}</div>
-                            ${customText ? `<div style="font-size: 0.72rem; color: var(--text-muted);">${customText}</div>` : ''}
+                            <div class="font-extrabold text-white">${item.name} x ${item.quantity}</div>
+                            ${customText ? `<div class="text-[10px] text-zinc-400">${customText}</div>` : ''}
                         </div>
-                        <div style="font-weight: 800; color: var(--primary); font-size: 0.88rem;">${formatPrice(item.price * item.quantity)}</div>
+                        <div class="font-black text-amber-400">${formatPrice(item.price * item.quantity)}</div>
                     </div>
                 `;
             });
             itemsHTML += '</div>';
             itemsHTML += `
-                <div style="display: flex; justify-content: space-between; align-items: center; font-weight: 800; font-size: 1.05rem; color: var(--text-primary); border-top: 1px solid var(--glass-border); padding-top: 8px;">
+                <div class="flex justify-between items-center font-black text-sm text-white pt-1">
                     <span>Total:</span>
-                    <span style="color: var(--primary);">${formatPrice(getCartTotal())}</span>
+                    <span class="text-amber-400 text-base">${formatPrice(getCartTotal())}</span>
                 </div>
             `;
 
@@ -141,7 +166,7 @@
                 e.preventDefault();
                 const placeBtn = document.getElementById('placeOrderBtn');
                 placeBtn.disabled = true;
-                placeBtn.textContent = 'Processing...';
+                placeBtn.textContent = 'Processing Order...';
 
                 const tableNum = document.getElementById('table_number').value;
                 const custName = document.getElementById('customer_name').value;
@@ -156,10 +181,7 @@
 
                 fetch('place-order.php', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 })
                 .then(r => r.json())
