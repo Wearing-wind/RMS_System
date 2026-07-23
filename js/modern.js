@@ -13,9 +13,6 @@ function saveCart() {
     if (typeof renderCartPage === 'function') {
         renderCartPage();
     }
-    if (typeof updateFloatingCartBar === 'function') {
-        updateFloatingCartBar();
-    }
 }
 
 // Format Price (Nepali Rupees)
@@ -27,7 +24,7 @@ function formatPrice(price) {
     return 'Rs. ' + num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// Update Cart Count Badges & Sticky Mobile Button
+// Update Cart Count Badges
 function updateCartCount() {
     const totalCount = cart.reduce((sum, item) => sum + item.quantity, 0);
     const badges = document.querySelectorAll('.cart-badge');
@@ -35,10 +32,6 @@ function updateCartCount() {
         badge.textContent = totalCount;
         badge.style.display = totalCount > 0 ? 'flex' : 'none';
     });
-
-    if (typeof updateFloatingCartBar === 'function') {
-        updateFloatingCartBar();
-    }
 }
 
 // Calculate Cart Total Amount
@@ -100,6 +93,34 @@ function removeFromCart(itemId, customizations = {}) {
     if (index > -1) removeFromCartByIndex(index);
 }
 
+// ==================== IMAGE ZOOM LIGHTBOX MODAL ====================
+function openImageZoomModal(imgSrc, title, price) {
+    const modal = document.getElementById('imageZoomModal');
+    const imgEl = document.getElementById('zoomModalImage');
+    const titleEl = document.getElementById('zoomModalTitle');
+    const priceEl = document.getElementById('zoomModalPrice');
+
+    if (imgEl) imgEl.src = imgSrc;
+    if (titleEl) titleEl.textContent = title || '';
+    if (priceEl) priceEl.textContent = price ? 'Rs. ' + price : '';
+
+    if (modal) {
+        modal.classList.remove('opacity-0', 'pointer-events-none');
+        modal.children[1].classList.remove('scale-90');
+        modal.children[1].classList.add('scale-100');
+    }
+    if (navigator.vibrate) navigator.vibrate(40);
+}
+
+function closeImageZoomModal() {
+    const modal = document.getElementById('imageZoomModal');
+    if (modal) {
+        modal.classList.add('opacity-0', 'pointer-events-none');
+        modal.children[1].classList.remove('scale-100');
+        modal.children[1].classList.add('scale-90');
+    }
+}
+
 // ==================== SLIDE-OUT CART PANEL ====================
 function openCartPanel() {
     const overlay = document.querySelector('.cart-overlay');
@@ -132,6 +153,7 @@ function updateCartPanel() {
     const mobileContainer = document.getElementById('mobileCartItems');
     const desktopContainer = document.getElementById('desktopCartItems');
     const checkoutContainer = document.getElementById('checkoutItemsList');
+    const classContainers = document.querySelectorAll('.cart-items');
 
     const totalEl = document.getElementById('cartTotal');
     const desktopTotalEl = document.getElementById('desktopCartTotal');
@@ -191,6 +213,7 @@ function updateCartPanel() {
         `;
     }).join('');
 
+    classContainers.forEach(c => c.innerHTML = htmlContent);
     if (mobileContainer) mobileContainer.innerHTML = htmlContent;
     if (desktopContainer) desktopContainer.innerHTML = htmlContent;
     if (checkoutContainer) checkoutContainer.innerHTML = htmlContent;
@@ -313,16 +336,16 @@ function callWaiter() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ table_number: tableNum })
     })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                showToast(data.message || `🔔 Waiter call sent for Table ${tableNum}! Staff on the way.`, 'success');
-                if (navigator.vibrate) navigator.vibrate(80);
-            } else {
-                showToast(data.message || 'Failed to call waiter', 'warning');
-            }
-        })
-        .catch(err => console.error(err));
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message || `🔔 Waiter call sent for Table ${tableNum}! Staff on the way.`, 'success');
+            if (navigator.vibrate) navigator.vibrate(80);
+        } else {
+            showToast(data.message || 'Failed to call waiter', 'warning');
+        }
+    })
+    .catch(err => console.error(err));
 }
 
 // Animated Tick Modal Popup
@@ -386,14 +409,14 @@ function playSuccessChime() {
         gain.connect(audioCtx.destination);
         osc.start();
         osc.stop(audioCtx.currentTime + 0.3);
-    } catch (e) { }
+    } catch (e) {}
 }
 
 // Utility for formatting time
 function parseMySQLDate(str) {
     if (!str) return new Date();
     const t = str.split(/[- :]/);
-    return new Date(Date.UTC(t[0], t[1] - 1, t[2], t[3] || 0, t[4] || 0, t[5] || 0));
+    return new Date(Date.UTC(t[0], t[1]-1, t[2], t[3]||0, t[4]||0, t[5]||0));
 }
 
 function getTimeAgo(dateStr) {
@@ -416,4 +439,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (overlay) overlay.addEventListener('click', closeCartPanel);
     if (closeBtn) closeBtn.addEventListener('click', closeCartPanel);
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeImageZoomModal();
+            closeCustomModal();
+            closeCartPanel();
+        }
+    });
 });

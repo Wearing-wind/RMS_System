@@ -128,16 +128,20 @@
                                 $dietary = strtolower($item['dietary_type'] ?? 'veg');
                                 $dietary_color = ($dietary === 'non-veg') ? 'border-red-500 bg-red-500' : 'border-emerald-500 bg-emerald-500';
                                 $prepTime = isset($item['preparation_time']) ? intval($item['preparation_time']) : 15;
+                                $img_src = (!empty($item['image']) && file_exists(__DIR__ . '/images/' . $item['image'])) ? ('images/' . htmlspecialchars($item['image'])) : '';
                                 
                                 echo '<div id="item-card-' . $item['id'] . '" class="menu-item bg-zinc-900/90 border border-zinc-800/80 rounded-3xl p-3 flex flex-col justify-between transition-all active:scale-[0.98]" data-id="' . $item['id'] . '" data-price="' . $item['price'] . '" data-preptime="' . $prepTime . '" data-name="' . strtolower(htmlspecialchars($item['name'])) . '" data-rawname="' . addslashes(htmlspecialchars($item['name'])) . '" data-rawdesc="' . addslashes(htmlspecialchars($item['description'])) . '" data-description="' . strtolower(htmlspecialchars($item['description'])) . '">';
                                 
-                                // RECTANGULAR 16:9 Aspect Ratio Image Box
-                                echo '<div class="relative aspect-[16/9] w-full rounded-2xl bg-zinc-950 overflow-hidden mb-2.5 flex items-center justify-center text-4xl border border-zinc-800/50">';
-                                if (!empty($item['image']) && file_exists(__DIR__ . '/images/' . $item['image'])) {
-                                    echo '<img src="images/' . htmlspecialchars($item['image']) . '" alt="' . htmlspecialchars($item['name']) . '" class="w-full h-full object-cover" loading="lazy" onerror="this.parentElement.innerHTML=\'🍽️\'">';
+                                // RECTANGULAR 16:9 Image Container with Zoom Click Trigger
+                                if (!empty($img_src)) {
+                                    echo '<div onclick="openImageZoomModal(\'' . $img_src . '\', \'' . addslashes(htmlspecialchars($item['name'])) . '\', \'' . number_format($item['price'], 0) . '\')" class="relative aspect-[16/9] w-full rounded-2xl bg-zinc-950 overflow-hidden mb-2.5 flex items-center justify-center text-4xl border border-zinc-800/50 cursor-pointer group active:scale-95 transition-all">';
+                                    echo '<img src="' . $img_src . '" alt="' . htmlspecialchars($item['name']) . '" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" onerror="this.parentElement.innerHTML=\'🍽️\'">';
+                                    echo '<span class="absolute bottom-2 right-2 bg-zinc-950/80 text-white p-1 px-2 rounded-lg text-[10px] font-extrabold opacity-0 group-hover:opacity-100 transition-opacity">🔍 Zoom</span>';
                                 } else {
+                                    echo '<div class="relative aspect-[16/9] w-full rounded-2xl bg-zinc-950 overflow-hidden mb-2.5 flex items-center justify-center text-4xl border border-zinc-800/50">';
                                     echo '🍽️';
                                 }
+
                                 if (!empty($item['is_popular'])) {
                                     echo '<span class="absolute top-2 left-2 bg-amber-500 text-zinc-950 font-black text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider shadow-md">⭐ Top</span>';
                                 }
@@ -218,6 +222,22 @@
         <span>🔔</span>
         <span class="hidden lg:inline font-black uppercase tracking-wider">Call Waiter</span>
     </button>
+
+    <!-- SPATIAL IMAGE ZOOM LIGHTBOX MODAL -->
+    <div id="imageZoomModal" class="fixed inset-0 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300 p-4">
+        <div class="absolute inset-0 bg-zinc-950/90 backdrop-blur-md" onclick="closeImageZoomModal()"></div>
+        <div class="relative z-10 w-full max-w-2xl bg-zinc-900 border border-zinc-800/80 rounded-3xl p-4 shadow-2xl scale-90 transition-transform duration-300 space-y-3 overflow-hidden">
+            <button onclick="closeImageZoomModal()" class="absolute top-3 right-3 z-20 bg-zinc-950/80 border border-zinc-800 text-white w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm shadow-lg hover:bg-rose-600 transition-colors">✕</button>
+            <div class="aspect-[16/9] w-full rounded-2xl bg-zinc-950 overflow-hidden border border-zinc-800/50 flex items-center justify-center">
+                <img id="zoomModalImage" src="" alt="Zoomed View" class="w-full h-full object-contain">
+            </div>
+            <div class="flex items-center justify-between px-2 pt-1">
+                <div class="font-extrabold text-base text-white" id="zoomModalTitle">Item Name</div>
+                <div class="font-black text-amber-400 text-lg" id="zoomModalPrice">Rs. 0</div>
+            </div>
+            <div class="text-[11px] text-zinc-500 text-center font-medium">Tap outside to close</div>
+        </div>
+    </div>
 
     <!-- Slide-Up Bottom Sheet Customization Modal -->
     <div id="customModal" class="fixed inset-0 z-50 flex items-end lg:items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
