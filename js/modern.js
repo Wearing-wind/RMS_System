@@ -64,14 +64,14 @@ function addToCart(itemId, itemName, itemPrice, customizations = {}) {
 
     saveCart();
     showToast(`Added ${itemName} to cart!`, 'success');
-    openCartPanel();
+    if (window.innerWidth < 1024) {
+        openCartPanel();
+    }
 }
 
-// Update Item Quantity in Cart
-function updateQuantity(itemId, change, customizations = {}) {
-    const index = cart.findIndex(item => item.id === itemId && JSON.stringify(item.customizations || {}) === JSON.stringify(customizations));
-
-    if (index > -1) {
+// Update Item Quantity by Cart Array Index
+function updateQuantityByIndex(index, change) {
+    if (cart[index]) {
         cart[index].quantity += change;
         if (cart[index].quantity <= 0) {
             cart.splice(index, 1);
@@ -80,11 +80,24 @@ function updateQuantity(itemId, change, customizations = {}) {
     }
 }
 
-// Remove Item from Cart
+// Remove Item from Cart by Array Index
+function removeFromCartByIndex(index) {
+    if (cart[index]) {
+        cart.splice(index, 1);
+        saveCart();
+        showToast('Item removed from cart', 'info');
+    }
+}
+
+// Legacy wrappers for backward compatibility
+function updateQuantity(itemId, change, customizations = {}) {
+    const index = cart.findIndex(item => item.id === itemId && JSON.stringify(item.customizations || {}) === JSON.stringify(customizations));
+    if (index > -1) updateQuantityByIndex(index, change);
+}
+
 function removeFromCart(itemId, customizations = {}) {
-    cart = cart.filter(item => !(item.id === itemId && JSON.stringify(item.customizations || {}) === JSON.stringify(customizations)));
-    saveCart();
-    showToast('Item removed from cart', 'info');
+    const index = cart.findIndex(item => item.id === itemId && JSON.stringify(item.customizations || {}) === JSON.stringify(customizations));
+    if (index > -1) removeFromCartByIndex(index);
 }
 
 // ==================== SLIDE-OUT CART PANEL ====================
@@ -116,31 +129,38 @@ function closeCartPanel() {
 }
 
 function updateCartPanel() {
-    const container = document.querySelector('.cart-items');
+    const mobileContainer = document.getElementById('mobileCartItems');
+    const desktopContainer = document.getElementById('desktopCartItems');
+    const checkoutContainer = document.getElementById('checkoutItemsList');
+
     const totalEl = document.getElementById('cartTotal');
+    const desktopTotalEl = document.getElementById('desktopCartTotal');
+    const checkoutSubtotalEl = document.getElementById('checkoutSubtotal');
     const checkoutBtn = document.getElementById('checkoutBtn');
+    const desktopCheckoutBtn = document.getElementById('desktopCheckoutBtn');
 
-    if (!container) return;
+    const isCartEmpty = (cart.length === 0);
+    const totalFormatted = formatPrice(getCartTotal());
 
-    if (cart.length === 0) {
-        container.innerHTML = `
-            <div class="text-center py-10 text-zinc-500">
-                <div class="text-4xl mb-2">🛒</div>
-                <p class="font-bold text-sm">Your cart is empty</p>
-            </div>
-        `;
-        if (totalEl) totalEl.textContent = 'Rs. 0.00';
-        if (checkoutBtn) {
-            checkoutBtn.classList.add('opacity-50', 'pointer-events-none');
-        }
-        return;
-    }
+    if (totalEl) totalEl.textContent = totalFormatted;
+    if (desktopTotalEl) desktopTotalEl.textContent = totalFormatted;
+    if (checkoutSubtotalEl) checkoutSubtotalEl.textContent = totalFormatted;
 
     if (checkoutBtn) {
-        checkoutBtn.classList.remove('opacity-50', 'pointer-events-none');
+        if (isCartEmpty) checkoutBtn.classList.add('opacity-50', 'pointer-events-none');
+        else checkoutBtn.classList.remove('opacity-50', 'pointer-events-none');
+    }
+    if (desktopCheckoutBtn) {
+        if (isCartEmpty) desktopCheckoutBtn.classList.add('opacity-50', 'pointer-events-none');
+        else desktopCheckoutBtn.classList.remove('opacity-50', 'pointer-events-none');
     }
 
-    container.innerHTML = cart.map(item => {
+    const htmlContent = isCartEmpty ? `
+        <div class="text-center py-10 text-zinc-500">
+            <div class="text-4xl mb-2">🛒</div>
+            <p class="font-bold text-sm">Your cart is empty</p>
+        </div>
+    ` : cart.map((item, idx) => {
         let customText = '';
         if (item.customizations) {
             if (item.customizations.spice_level) customText += `🌶️ ${item.customizations.spice_level}`;
@@ -150,26 +170,30 @@ function updateCartPanel() {
             }
         }
         return `
-            <div class="bg-zinc-950/80 border border-zinc-800/60 rounded-2xl p-3 flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-zinc-900 flex items-center justify-center text-lg shrink-0">🍽️</div>
-                <div class="flex-1 min-w-0">
-                    <div class="font-black text-xs text-white truncate">${item.name}</div>
-                    ${customText ? `<div class="text-[10px] text-zinc-400 truncate">${customText}</div>` : ''}
-                    <div class="text-xs font-black text-amber-400 mt-0.5">${formatPrice(item.price * item.quantity)}</div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <div class="flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 rounded-xl p-1">
-                        <button class="w-6 h-6 rounded-lg bg-zinc-800 text-white font-black text-xs flex items-center justify-center active:bg-amber-500 active:text-zinc-950" onclick="updateQuantity(${item.id}, -1, ${JSON.stringify(item.customizations || {}).replace(/"/g, '&quot;')})">−</button>
-                        <span class="text-xs font-black text-white w-4 text-center">${item.quantity}</span>
-                        <button class="w-6 h-6 rounded-lg bg-zinc-800 text-white font-black text-xs flex items-center justify-center active:bg-amber-500 active:text-zinc-950" onclick="updateQuantity(${item.id}, 1, ${JSON.stringify(item.customizations || {}).replace(/"/g, '&quot;')})">+</button>
+            <div class="bg-zinc-950/80 border border-zinc-800/60 rounded-2xl p-3 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                    <div class="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-base shrink-0">🍽️</div>
+                    <div class="min-w-0 flex-1">
+                        <div class="font-black text-xs text-white truncate">${item.name}</div>
+                        ${customText ? `<div class="text-[10px] text-zinc-400 truncate">${customText}</div>` : ''}
+                        <div class="text-xs font-black text-amber-400 mt-0.5">${formatPrice(item.price * item.quantity)}</div>
                     </div>
-                    <button class="text-xs text-rose-400 font-bold px-1" onclick="removeFromCart(${item.id}, ${JSON.stringify(item.customizations || {}).replace(/"/g, '&quot;')})">✕</button>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <div class="flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 rounded-xl p-1">
+                        <button class="w-6 h-6 rounded-lg bg-zinc-800 text-white font-black text-xs flex items-center justify-center active:bg-amber-500 active:text-zinc-950" onclick="updateQuantityByIndex(${idx}, -1)">−</button>
+                        <span class="text-xs font-black text-white w-4 text-center">${item.quantity}</span>
+                        <button class="w-6 h-6 rounded-lg bg-zinc-800 text-white font-black text-xs flex items-center justify-center active:bg-amber-500 active:text-zinc-950" onclick="updateQuantityByIndex(${idx}, 1)">+</button>
+                    </div>
+                    <button class="text-xs text-rose-400 font-bold px-1" onclick="removeFromCartByIndex(${idx})">✕</button>
                 </div>
             </div>
         `;
     }).join('');
 
-    if (totalEl) totalEl.textContent = formatPrice(getCartTotal());
+    if (mobileContainer) mobileContainer.innerHTML = htmlContent;
+    if (desktopContainer) desktopContainer.innerHTML = htmlContent;
+    if (checkoutContainer) checkoutContainer.innerHTML = htmlContent;
 }
 
 // ==================== ITEM CUSTOMIZATION MODAL ====================
@@ -207,31 +231,28 @@ function openCustomModal(itemId, itemName, itemPrice, description, prepTime) {
 
     const modal = document.getElementById('customModal');
     if (modal) {
-        modal.classList.add('active');
         modal.classList.remove('opacity-0', 'pointer-events-none');
-        if (modal.children[1]) {
-            modal.children[1].classList.remove('translate-y-full');
-        }
+        modal.children[1].classList.remove('translate-y-full', 'lg:translate-y-0');
     }
 }
 
 function closeCustomModal() {
     const modal = document.getElementById('customModal');
     if (modal) {
-        modal.classList.remove('active');
         modal.classList.add('opacity-0', 'pointer-events-none');
-        if (modal.children[1]) {
-            modal.children[1].classList.add('translate-y-full');
-        }
+        modal.children[1].classList.add('translate-y-full');
     }
+    currentCustomItem = null;
 }
 
 function customModalChangeQty(delta) {
     if (!currentCustomItem) return;
     currentCustomItem.quantity += delta;
     if (currentCustomItem.quantity < 1) currentCustomItem.quantity = 1;
+
     const qtyEl = document.getElementById('customModalQty');
     if (qtyEl) qtyEl.textContent = currentCustomItem.quantity;
+
     updateCustomModalTotal();
 }
 
@@ -292,14 +313,16 @@ function callWaiter() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ table_number: tableNum })
     })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) {
-            showToast(`🔔 Waiter call sent for Table ${tableNum}! Staff on the way.`, 'success');
-            if (navigator.vibrate) navigator.vibrate(80);
-        }
-    })
-    .catch(err => console.error(err));
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message || `🔔 Waiter call sent for Table ${tableNum}! Staff on the way.`, 'success');
+                if (navigator.vibrate) navigator.vibrate(80);
+            } else {
+                showToast(data.message || 'Failed to call waiter', 'warning');
+            }
+        })
+        .catch(err => console.error(err));
 }
 
 // Animated Tick Modal Popup
@@ -354,48 +377,43 @@ function playSuccessChime() {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
-        osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15); // A5
-
+        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15);
         gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
-
         osc.connect(gain);
         gain.connect(audioCtx.destination);
-
         osc.start();
         osc.stop(audioCtx.currentTime + 0.3);
-    } catch(e) {}
+    } catch (e) { }
 }
 
-function parseMySQLDate(dateStr) {
-    if (!dateStr) return new Date();
-    return new Date(dateStr.replace(/-/g, '/'));
+// Utility for formatting time
+function parseMySQLDate(str) {
+    if (!str) return new Date();
+    const t = str.split(/[- :]/);
+    return new Date(Date.UTC(t[0], t[1] - 1, t[2], t[3] || 0, t[4] || 0, t[5] || 0));
 }
 
 function getTimeAgo(dateStr) {
     const date = parseMySQLDate(dateStr);
     const seconds = Math.floor((new Date() - date) / 1000);
-    if (seconds < 60) return `${seconds}s ago`;
+    if (seconds < 60) return 'Just now';
     const minutes = Math.floor(seconds / 60);
     if (minutes < 60) return `${minutes}m ago`;
     const hours = Math.floor(minutes / 60);
     return `${hours}h ago`;
 }
 
+// Global Event Listeners
 document.addEventListener('DOMContentLoaded', () => {
     updateCartCount();
+    updateCartPanel();
 
     const overlay = document.querySelector('.cart-overlay');
     const closeBtn = document.querySelector('.cart-close');
+
     if (overlay) overlay.addEventListener('click', closeCartPanel);
     if (closeBtn) closeBtn.addEventListener('click', closeCartPanel);
-
-    document.addEventListener('change', (e) => {
-        if (['extraCheese', 'extraFries', 'extraSauce'].includes(e.target.id) || e.target.name === 'spice_level') {
-            updateCustomModalTotal();
-        }
-    });
 });

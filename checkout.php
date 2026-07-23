@@ -1,10 +1,16 @@
+<?php
+// Checkout Page - Order Review & Confirmation
+require_once 'config.php';
+$conn = getDBConnection();
+$table_num = isset($_GET['table']) ? htmlspecialchars($_GET['table']) : '1';
+?>
 <!DOCTYPE html>
 <html lang="en" class="h-full bg-zinc-950 text-zinc-100">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#09090b">
-    <title>Checkout - QR Cafe</title>
+    <title>Review & Place Order - QR Cafe</title>
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -23,184 +29,147 @@
     </script>
     <style>
         body { overscroll-behavior-y: contain; -webkit-tap-highlight-color: transparent; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="min-h-full pb-24 font-sans antialiased selection:bg-amber-500 selection:text-zinc-950">
+<body class="min-h-full pb-24 lg:pb-12 font-sans antialiased selection:bg-amber-500 selection:text-zinc-950">
 
-    <?php
-    $table_num = isset($_GET['table']) ? htmlspecialchars($_GET['table']) : '1';
-    ?>
-
-    <!-- Sticky Mobile Header -->
+    <!-- Top Header -->
     <header class="sticky top-0 z-40 bg-zinc-950/90 backdrop-blur-xl border-b border-zinc-800/80 px-4 py-3.5">
-        <div class="max-w-md mx-auto flex items-center justify-between gap-3">
-            <a href="menu.php?table=<?php echo urlencode($table_num); ?>" class="flex items-center gap-2 text-lg font-black text-white">
-                <span>☕</span> QR Cafe & Dining
+        <div class="max-w-4xl mx-auto flex items-center justify-between gap-3">
+            <a href="menu.php?table=<?php echo urlencode($table_num); ?>" class="flex items-center gap-2 font-extrabold text-xs text-amber-400">
+                <span>← Back to Menu</span>
             </a>
             <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 font-bold text-xs">
-                📍 Table <?php echo $table_num; ?>
+                <span>📍</span> Table <?php echo $table_num; ?>
             </span>
         </div>
     </header>
 
-    <main class="max-w-md mx-auto px-4 pt-4">
-        <div class="bg-zinc-900/90 border border-zinc-800 rounded-3xl p-5 shadow-2xl">
-            <h1 class="text-xl font-black text-white mb-4">Confirm & Place Order</h1>
+    <!-- Main Adaptive Container -->
+    <main class="max-w-4xl mx-auto px-4 pt-4 space-y-6">
 
-            <!-- Empty Cart Warning -->
-            <div id="emptyCheckoutAlert" style="display: none;" class="text-center py-10 space-y-3">
-                <div class="text-5xl">🛒</div>
-                <h3 class="text-base font-extrabold text-white">Your cart is empty</h3>
-                <p class="text-xs text-zinc-400">Please add items to your cart before proceeding.</p>
-                <a href="menu.php?table=<?php echo urlencode($table_num); ?>" class="h-12 w-full rounded-2xl bg-amber-500 text-zinc-950 font-black text-sm flex items-center justify-center active:scale-95 shadow-lg shadow-amber-500/20">
-                    Browse Menu
-                </a>
-            </div>
-
-            <!-- Checkout Form -->
-            <form id="spatialCheckoutForm" class="space-y-4">
-                <input type="hidden" id="table_number" value="<?php echo $table_num; ?>">
-
-                <div>
-                    <label class="block text-xs font-bold text-zinc-300 mb-1.5">Table Number</label>
-                    <div class="w-full bg-zinc-950 border border-zinc-800 rounded-2xl p-3.5 font-black text-sm text-amber-400">
-                        📍 Table <?php echo $table_num; ?>
-                    </div>
-                </div>
-
-                <div>
-                    <label for="customer_name" class="block text-xs font-bold text-zinc-300 mb-1.5">Customer Name (Optional)</label>
-                    <input type="text" id="customer_name" placeholder="Enter your name" class="w-full h-12 bg-zinc-950 border border-zinc-800 rounded-2xl px-4 text-sm text-white placeholder-zinc-500 outline-none focus:border-amber-500 transition-all">
-                </div>
-
-                <div>
-                    <label for="notes" class="block text-xs font-bold text-zinc-300 mb-1.5">Kitchen Instructions (Optional)</label>
-                    <textarea id="notes" placeholder="e.g. Less sugar, extra napkin" rows="2" class="w-full bg-zinc-950 border border-zinc-800 rounded-2xl p-3.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-amber-500 transition-all resize-none"></textarea>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-zinc-300 mb-1.5">Order Summary</label>
-                    <div id="checkoutOrderSummary" class="bg-zinc-950/80 border border-zinc-800 rounded-2xl p-4 space-y-2">
-                        <!-- Rendered by JS -->
-                    </div>
-                </div>
-
-                <button type="submit" id="placeOrderBtn" class="h-12 w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-zinc-950 font-black text-sm active:scale-95 shadow-lg shadow-amber-500/20">
-                    Place Order • <span id="checkoutTotalText">Rs. 0</span>
-                </button>
-            </form>
+        <div class="text-center md:text-left">
+            <h1 class="text-xl md:text-2xl font-black text-white">Review Your Order</h1>
+            <p class="text-xs text-zinc-400">Verify items before sending to the kitchen for Table <?php echo $table_num; ?></p>
         </div>
-    </main>
 
-    <!-- Fixed Bottom Tab Bar -->
-    <nav class="fixed bottom-0 left-0 right-0 z-40 max-w-md mx-auto bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800/80 flex justify-around items-center h-16 rounded-t-2xl px-2">
-        <a href="menu.php?table=<?php echo urlencode($table_num); ?>" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
-            <span class="text-lg">🍽️</span>
-            <span>Menu</span>
-        </a>
-        <a href="cart.php?table=<?php echo urlencode($table_num); ?>" class="flex flex-col items-center gap-0.5 text-amber-500 font-extrabold text-[10px]">
-            <span class="text-lg">🛒</span>
-            <span>Cart</span>
-            <span class="cart-badge absolute top-1 right-2 bg-amber-500 text-zinc-950 font-black text-[9px] w-4 h-4 rounded-full flex items-center justify-center" style="display: none;">0</span>
-        </a>
-        <button onclick="callWaiter()" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
-            <span class="text-lg">🔔</span>
-            <span>Waiter</span>
-        </button>
-        <a href="order-success.php?table=<?php echo urlencode($table_num); ?>" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
-            <span class="text-lg">📋</span>
-            <span>Tracker</span>
-        </a>
-    </nav>
+        <!-- 2-Column Responsive Grid on Desktop -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+
+            <!-- Left Side: Order Items Breakdown -->
+            <section class="bg-zinc-900/90 border border-zinc-800/80 rounded-3xl p-5 shadow-2xl space-y-4">
+                <h3 class="text-sm font-black text-white flex items-center gap-2 border-b border-zinc-800 pb-3">
+                    <span>🛒</span> Selected Order Items
+                </h3>
+
+                <div id="checkoutItemsList" class="cart-items space-y-3 max-h-[350px] overflow-y-auto pr-1">
+                    <!-- Rendered dynamically by JS -->
+                </div>
+
+                <div class="pt-3 border-t border-zinc-800 space-y-2">
+                    <div class="flex justify-between items-center text-sm font-bold text-zinc-400">
+                        <span>Subtotal:</span>
+                        <span id="checkoutSubtotal" class="text-white">Rs. 0.00</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm font-bold text-zinc-400">
+                        <span>Taxes & Service Charge:</span>
+                        <span class="text-emerald-400 font-extrabold">INCLUDED</span>
+                    </div>
+                    <div class="flex justify-between items-center text-base font-black pt-2 border-t border-zinc-800/60">
+                        <span class="text-zinc-200">Total Amount:</span>
+                        <span id="cartTotal" class="text-amber-400 text-xl">Rs. 0.00</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Side: Special Requests & Send Order -->
+            <section class="bg-zinc-900/90 border border-zinc-800/80 rounded-3xl p-5 shadow-2xl space-y-5">
+                <h3 class="text-sm font-black text-white flex items-center gap-2 border-b border-zinc-800 pb-3">
+                    <span>📝</span> Special Cooking Instructions
+                </h3>
+
+                <div>
+                    <label class="block text-xs font-bold text-zinc-300 mb-1.5">Cooking Notes / Allergy Requests (Optional)</label>
+                    <textarea id="orderNotes" rows="3" placeholder="e.g. Less sugar in coffee, extra crispy fries, no onion..." class="w-full bg-zinc-950 border border-zinc-800 rounded-2xl p-3.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-amber-500 resize-none"></textarea>
+                </div>
+
+                <div class="bg-amber-500/10 border border-amber-500/20 p-3.5 rounded-2xl text-xs text-amber-300 space-y-1">
+                    <div class="font-extrabold flex items-center gap-1.5">
+                        <span>⚡</span> Fast Order Delivery
+                    </div>
+                    <p class="text-[11px] text-zinc-400">Once confirmed, your order tickets will immediately print in the kitchen. You can choose payment options after receiving your food.</p>
+                </div>
+
+                <!-- Confirm Order Button -->
+                <button id="confirmOrderBtn" onclick="submitOrder()" class="h-14 w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-zinc-950 font-black text-sm active:scale-95 shadow-xl shadow-amber-500/20 flex items-center justify-center gap-2">
+                    <span>🚀 Place Order & Send to Kitchen</span>
+                </button>
+            </section>
+
+        </div>
+
+    </main>
 
     <script src="js/modern.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const form = document.getElementById('spatialCheckoutForm');
-            const alertView = document.getElementById('emptyCheckoutAlert');
-            const summaryContainer = document.getElementById('checkoutOrderSummary');
-            const totalText = document.getElementById('checkoutTotalText');
-
-            if (cart.length === 0) {
-                if (form) form.style.display = 'none';
-                if (alertView) alertView.style.display = 'block';
+        function submitOrder() {
+            const currentCart = JSON.parse(localStorage.getItem('cart')) || (typeof cart !== 'undefined' ? cart : []);
+            if (!currentCart || currentCart.length === 0) {
+                showToast('Your cart is empty', 'warning');
                 return;
             }
 
-            if (form) form.style.display = 'block';
-            if (alertView) alertView.style.display = 'none';
+            const btn = document.getElementById('confirmOrderBtn');
+            if (btn) {
+                btn.disabled = true;
+                btn.classList.add('opacity-50', 'pointer-events-none');
+                btn.innerHTML = `<span>⏳ Sending Order...</span>`;
+            }
 
-            let itemsHTML = '<div class="space-y-2 mb-3 pb-3 border-b border-zinc-800">';
-            cart.forEach(item => {
-                let customText = '';
-                if (item.customizations) {
-                    if (item.customizations.spice_level) customText += `🌶️ ${item.customizations.spice_level}`;
-                    if (item.customizations.extras && item.customizations.extras.length > 0) {
-                        const extraNames = item.customizations.extras.map(e => e.name).join(', ');
-                        customText += ` | + ${extraNames}`;
+            const tableNum = '<?php echo $table_num; ?>';
+            const notes = document.getElementById('orderNotes')?.value.trim() || '';
+
+            fetch('place-order.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    table_number: tableNum,
+                    payment_method: 'pending',
+                    notes: notes,
+                    cart: currentCart,
+                    items: currentCart
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showOrderPlacedTickModal(data.order, `order-success.php?table=${encodeURIComponent(tableNum)}&order_id=${data.order.id}`);
+                } else {
+                    showToast(data.message || 'Failed to place order', 'error');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.classList.remove('opacity-50', 'pointer-events-none');
+                        btn.innerHTML = `<span>🚀 Place Order & Send to Kitchen</span>`;
                     }
                 }
-
-                itemsHTML += `
-                    <div class="flex justify-between items-center text-xs">
-                        <div>
-                            <div class="font-extrabold text-white">${item.name} x ${item.quantity}</div>
-                            ${customText ? `<div class="text-[10px] text-zinc-400">${customText}</div>` : ''}
-                        </div>
-                        <div class="font-black text-amber-400">${formatPrice(item.price * item.quantity)}</div>
-                    </div>
-                `;
+            })
+            .catch(err => {
+                console.error(err);
+                showToast('Network error while placing order', 'error');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50', 'pointer-events-none');
+                    btn.innerHTML = `<span>🚀 Place Order & Send to Kitchen</span>`;
+                }
             });
-            itemsHTML += '</div>';
-            itemsHTML += `
-                <div class="flex justify-between items-center font-black text-sm text-white pt-1">
-                    <span>Total:</span>
-                    <span class="text-amber-400 text-base">${formatPrice(getCartTotal())}</span>
-                </div>
-            `;
+        }
 
-            summaryContainer.innerHTML = itemsHTML;
-            if (totalText) totalText.textContent = formatPrice(getCartTotal());
-
-            form.addEventListener('submit', function(e) {
-                e.preventDefault();
-                const placeBtn = document.getElementById('placeOrderBtn');
-                placeBtn.disabled = true;
-                placeBtn.textContent = 'Processing Order...';
-
-                const tableNum = document.getElementById('table_number').value;
-                const custName = document.getElementById('customer_name').value;
-                const noteText = document.getElementById('notes').value;
-
-                const payload = {
-                    table_number: tableNum,
-                    customer_name: custName,
-                    notes: noteText,
-                    cart: cart
-                };
-
-                fetch('place-order.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) {
-                        showOrderPlacedTickModal(data.order, 'order-success.php?order_id=' + data.order_id);
-                    } else {
-                        showToast(data.message || 'Failed to place order', 'error');
-                        placeBtn.disabled = false;
-                        placeBtn.textContent = 'Place Order';
-                    }
-                })
-                .catch(err => {
-                    console.error(err);
-                    showToast('An error occurred. Please try again.', 'error');
-                    placeBtn.disabled = false;
-                    placeBtn.textContent = 'Place Order';
-                });
-            });
+        document.addEventListener('DOMContentLoaded', () => {
+            updateCartPanel();
+            const subtotalEl = document.getElementById('checkoutSubtotal');
+            if (subtotalEl) subtotalEl.textContent = formatPrice(getCartTotal());
         });
     </script>
 </body>

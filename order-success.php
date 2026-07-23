@@ -1,10 +1,51 @@
+<?php
+// Order Tracker & Settlement Page
+require_once 'config.php';
+$conn = getDBConnection();
+
+$table_num = isset($_GET['table']) ? htmlspecialchars($_GET['table']) : '1';
+$order_id = isset($_GET['order_id']) ? intval($_GET['order_id']) : 0;
+
+$order = null;
+$order_items = [];
+$calculated_total = 0;
+
+if ($conn && $order_id > 0) {
+    $stmt = $conn->prepare("SELECT * FROM orders WHERE id = ?");
+    $stmt->bind_param("i", $order_id);
+    $stmt->execute();
+    $order = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if ($order) {
+        $items_stmt = $conn->prepare("SELECT * FROM order_items WHERE order_id = ?");
+        $items_stmt->bind_param("i", $order_id);
+        $items_stmt->execute();
+        $res = $items_stmt->get_result();
+        while ($row = $res->fetch_assoc()) {
+            $order_items[] = $row;
+            $calculated_total += ($row['quantity'] * $row['price']);
+        }
+        $items_stmt->close();
+    }
+}
+
+// Fetch Payment QR Settings
+$setting = null;
+if ($conn) {
+    $res = $conn->query("SELECT * FROM payment_settings WHERE is_active = 1 LIMIT 1");
+    if ($res && $res->num_rows > 0) {
+        $setting = $res->fetch_assoc();
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="en" class="h-full bg-zinc-950 text-zinc-100">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#09090b">
-    <title>Order Tracker - QR Cafe</title>
+    <title>Order #<?php echo $order_id; ?> Status - QR Cafe</title>
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -23,242 +64,222 @@
     </script>
     <style>
         body { overscroll-behavior-y: contain; -webkit-tap-highlight-color: transparent; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="min-h-full pb-24 font-sans antialiased selection:bg-amber-500 selection:text-zinc-950">
+<body class="min-h-full pb-24 lg:pb-12 font-sans antialiased selection:bg-amber-500 selection:text-zinc-950">
 
-    <?php
-    require_once 'config.php';
-    $conn = getDBConnection();
-    
-    $order_id = isset($_GET['order_id']) ? intval($_GET['order_id']) : 0;
-    $order = null;
-    $payment_settings = null;
-    
-    if ($conn) {
-        $payment_result = $conn->query("SELECT * FROM payment_settings WHERE is_active = 1 LIMIT 1");
-        if ($payment_result && $payment_row = $payment_result->fetch_assoc()) {
-            $payment_settings = $payment_row;
-        }
-        
-        if ($order_id > 0) {
-            $stmt = $conn->prepare("SELECT * FROM orders WHERE id = ?");
-            $stmt->bind_param("i", $order_id);
-            $stmt->execute();
-            $res = $stmt->get_result();
-            if ($order = $res->fetch_assoc()) {
-                $items_stmt = $conn->prepare("
-                    SELECT oi.*, mi.name 
-                    FROM order_items oi 
-                    JOIN menu_items mi ON oi.menu_item_id = mi.id 
-                    WHERE oi.order_id = ?
-                ");
-                $items_stmt->bind_param("i", $order_id);
-                $items_stmt->execute();
-                $items_res = $items_stmt->get_result();
-                $items = [];
-                while ($it = $items_res->fetch_assoc()) {
-                    $items[] = $it;
-                }
-                $items_stmt->close();
-                $order['items'] = $items;
-            }
-            $stmt->close();
-        }
-        $conn->close();
-    }
-    
-    if (!$order && isset($_SESSION['last_order'])) {
-        $order = $_SESSION['last_order'];
-    }
-    
-    if (!$order) {
-        header('Location: menu.php');
-        exit;
-    }
-    
-    $table_number = htmlspecialchars($order['table_number'] ?? '1');
-    $order_status = $order['status'] ?? 'new';
-    $is_cancelled = ($order_status === 'cancelled');
-    $is_completed = ($order_status === 'completed'); // SERVED
-    $payment_method = $order['payment_method'] ?? 'pending';
-    ?>
-
-    <!-- Sticky Mobile Header -->
+    <!-- Header -->
     <header class="sticky top-0 z-40 bg-zinc-950/90 backdrop-blur-xl border-b border-zinc-800/80 px-4 py-3.5">
-        <div class="max-w-md mx-auto flex items-center justify-between gap-3">
-            <a href="menu.php?table=<?php echo urlencode($table_number); ?>" class="flex items-center gap-2 text-lg font-black text-white">
-                <span>☕</span> QR Cafe & Dining
+        <div class="max-w-4xl mx-auto flex items-center justify-between gap-3">
+            <a href="menu.php?table=<?php echo urlencode($table_num); ?>" class="flex items-center gap-2 font-extrabold text-xs text-amber-400">
+                <span>← Back to Menu</span>
             </a>
             <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 font-bold text-xs">
-                📍 Table <?php echo $table_number; ?>
+                <span>📍</span> Table <?php echo $table_num; ?>
             </span>
         </div>
     </header>
 
-    <main class="max-w-md mx-auto px-4 pt-4">
-        <div class="bg-zinc-900/90 border border-zinc-800 rounded-3xl p-5 shadow-2xl space-y-4">
+    <main class="max-w-4xl mx-auto px-4 pt-4 space-y-6">
+
+        <?php if (!$order): ?>
+            <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 text-center space-y-3">
+                <div class="text-4xl">❓</div>
+                <h2 class="font-black text-white text-lg">No Active Order Found</h2>
+                <a href="menu.php?table=<?php echo urlencode($table_num); ?>" class="inline-block px-6 py-2.5 rounded-2xl bg-amber-500 text-zinc-950 font-black text-xs">Browse Menu</a>
+            </div>
+        <?php else: ?>
+
+            <?php
+            $status = strtolower($order['status']);
+            $is_cancelled = ($status === 'cancelled' || $status === 'rejected');
+            
+            // Extract rejection reason if available
+            $reject_reason = '';
+            if ($is_cancelled && !empty($order['notes'])) {
+                if (preg_match('/\[REJECTED:\s*(.*?)\]/i', $order['notes'], $matches)) {
+                    $reject_reason = trim($matches[1]);
+                } else {
+                    $reject_reason = $order['notes'];
+                }
+            }
+            ?>
 
             <?php if ($is_cancelled): ?>
-                <!-- REJECTED DISPLAY -->
-                <div class="text-center py-4">
-                    <div class="text-5xl mb-3">🚫</div>
-                    <h1 class="text-xl font-black text-rose-500 mb-1">Order Cancelled / Rejected</h1>
-                    <p class="text-xs text-zinc-400 mb-4">Order #<?php echo $order['id']; ?> has been cancelled by the kitchen.</p>
-                    <a href="menu.php?table=<?php echo urlencode($table_number); ?>" class="h-12 w-full rounded-2xl bg-amber-500 text-zinc-950 font-black text-sm flex items-center justify-center">
-                        Modify & Place New Order →
+                <!-- CANCELLED ORDER DISPLAY CARD -->
+                <section class="bg-zinc-900/90 border border-rose-500/40 rounded-3xl p-6 shadow-2xl space-y-5 text-center md:text-left">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-rose-500/20 pb-4">
+                        <div>
+                            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 font-black text-xs mb-2">
+                                <span>❌</span> Order Cancelled by Kitchen
+                            </div>
+                            <h1 class="text-xl md:text-2xl font-black text-white">Order #<?php echo $order_id; ?></h1>
+                            <p class="text-xs text-zinc-400">Placed at <?php echo htmlspecialchars($order['created_at']); ?></p>
+                        </div>
+                        <div class="text-center md:text-right">
+                            <span class="px-4 py-2 rounded-2xl bg-rose-500/20 border border-rose-500/40 text-rose-400 font-black text-xs">CANCELLED</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-4 space-y-2 text-rose-300">
+                        <div class="font-extrabold text-sm flex items-center gap-2">
+                            <span>🚨</span> Order Status Update
+                        </div>
+                        <p class="text-xs text-zinc-300">This order was cancelled by the kitchen staff. No charges have been processed for Table <?php echo $table_num; ?>.</p>
+                        <?php if (!empty($reject_reason)): ?>
+                            <div class="pt-2 border-t border-rose-500/20 text-xs font-bold text-rose-400">
+                                Reason: <?php echo htmlspecialchars($reject_reason); ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <a href="menu.php?table=<?php echo urlencode($table_num); ?>" class="h-14 w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-zinc-950 font-black text-sm flex items-center justify-center active:scale-95 shadow-xl shadow-amber-500/20">
+                        🛒 Back to Menu & Order Again
                     </a>
-                </div>
+                </section>
             <?php else: ?>
-                <!-- ACTIVE ORDER TRACKER -->
-                <div class="text-center">
-                    <div class="text-4xl mb-1">✨</div>
-                    <h1 class="text-xl font-black text-white mb-1">Order Tracker</h1>
-                    <p class="text-amber-400 font-black text-sm">Order #<?php echo $order['id']; ?></p>
-                </div>
+                <!-- ACTIVE ORDER TRACKER CARD -->
+                <section class="bg-zinc-900/90 border border-zinc-800 rounded-3xl p-6 shadow-2xl space-y-5 text-center md:text-left">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-zinc-800 pb-4">
+                        <div>
+                            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-black text-xs mb-2">
+                                <span>✅</span> Order Received by Kitchen
+                            </div>
+                            <h1 class="text-xl md:text-2xl font-black text-white">Order #<?php echo $order_id; ?></h1>
+                            <p class="text-xs text-zinc-400">Placed at <?php echo htmlspecialchars($order['created_at']); ?></p>
+                        </div>
 
-                <!-- Status Progress Badges -->
-                <div class="grid grid-cols-4 gap-1.5 bg-zinc-950/80 p-2 rounded-2xl border border-zinc-800 text-center">
-                    <div class="p-2 rounded-xl border <?php echo in_array($order_status, ['new', 'preparing', 'ready', 'completed']) ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 font-black' : 'border-zinc-800 text-zinc-600'; ?> text-[10px]">
-                        ✓ Placed
-                    </div>
-                    <div class="p-2 rounded-xl border <?php echo in_array($order_status, ['preparing', 'ready', 'completed']) ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 font-black' : 'border-zinc-800 text-zinc-600'; ?> text-[10px]">
-                        🔥 Prep
-                    </div>
-                    <div class="p-2 rounded-xl border <?php echo in_array($order_status, ['ready', 'completed']) ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 font-black' : 'border-zinc-800 text-zinc-600'; ?> text-[10px]">
-                        ✅ Ready
-                    </div>
-                    <div class="p-2 rounded-xl border <?php echo $order_status === 'completed' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 font-black' : 'border-zinc-800 text-zinc-600'; ?> text-[10px]">
-                        🍽️ Served
-                    </div>
-                </div>
-
-                <!-- Order Details Breakdown -->
-                <div class="bg-zinc-950/80 border border-zinc-800/80 rounded-2xl p-4 space-y-2">
-                    <div class="flex justify-between items-center pb-2 border-b border-zinc-800 text-xs">
-                        <span class="text-zinc-400">Current Status:</span>
-                        <span class="px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 font-black uppercase text-[10px]"><?php echo strtoupper($order_status); ?></span>
+                        <div class="text-center md:text-right">
+                            <div class="text-xs text-zinc-400 font-bold">Total Bill</div>
+                            <div class="text-2xl font-black text-amber-400">Rs. <?php echo number_format($calculated_total ?: $order['total_amount'], 2); ?></div>
+                        </div>
                     </div>
 
-                    <div class="space-y-1 py-1">
-                        <?php foreach ($order['items'] as $item): ?>
-                            <div class="flex justify-between text-xs">
-                                <span><?php echo htmlspecialchars($item['name']); ?> <strong class="text-amber-400">x<?php echo $item['quantity']; ?></strong></span>
-                                <span class="font-black text-amber-400">Rs. <?php echo number_format($item['price'] * $item['quantity'], 2); ?></span>
+                    <!-- Status Progress Pipeline -->
+                    <?php
+                    $step1 = true;
+                    $step2 = ($status === 'preparing' || $status === 'ready' || $status === 'completed');
+                    $step3 = ($status === 'ready' || $status === 'completed');
+                    $step4 = ($status === 'completed');
+                    ?>
+
+                    <div>
+                        <h3 class="text-xs font-extrabold text-zinc-400 uppercase tracking-wider mb-3">Live Kitchen Status Tracker</h3>
+                        <div class="grid grid-cols-4 gap-2">
+                            <div class="p-3 rounded-2xl border text-center transition-all <?php echo $step1 ? 'bg-amber-500/10 border-amber-500 text-amber-400' : 'bg-zinc-950 border-zinc-800 text-zinc-600'; ?>">
+                                <div class="text-lg">🆕</div>
+                                <div class="text-[10px] font-black mt-1">Received</div>
+                            </div>
+                            <div class="p-3 rounded-2xl border text-center transition-all <?php echo $step2 ? 'bg-amber-500/10 border-amber-500 text-amber-400' : 'bg-zinc-950 border-zinc-800 text-zinc-600'; ?>">
+                                <div class="text-lg">🍳</div>
+                                <div class="text-[10px] font-black mt-1">In Prep</div>
+                            </div>
+                            <div class="p-3 rounded-2xl border text-center transition-all <?php echo $step3 ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400' : 'bg-zinc-950 border-zinc-800 text-zinc-600'; ?>">
+                                <div class="text-lg">✅</div>
+                                <div class="text-[10px] font-black mt-1">Ready</div>
+                            </div>
+                            <div class="p-3 rounded-2xl border text-center transition-all <?php echo $step4 ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-zinc-950 font-black' : 'bg-zinc-950 border-zinc-800 text-zinc-600'; ?>">
+                                <div class="text-lg">✔</div>
+                                <div class="text-[10px] font-black mt-1">Served</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            <?php endif; ?>
+
+            <!-- 2-Column Responsive Layout (Ordered Items Breakdown & Payment Options) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+
+                <!-- Left Column: Ordered Items List -->
+                <section class="bg-zinc-900/90 border border-zinc-800 rounded-3xl p-5 shadow-2xl space-y-3">
+                    <h3 class="text-sm font-black text-white border-b border-zinc-800 pb-3 flex items-center gap-2">
+                        <span>📋</span> Ordered Items
+                    </h3>
+                    <div class="space-y-2">
+                        <?php foreach ($order_items as $item): ?>
+                            <div class="bg-zinc-950/70 border border-zinc-800/60 rounded-2xl p-3 flex justify-between items-center text-xs">
+                                <div>
+                                    <div class="font-extrabold text-white"><?php echo htmlspecialchars($item['item_name']); ?></div>
+                                    <div class="text-zinc-400">Rs. <?php echo number_format($item['price'], 0); ?> x <?php echo $item['quantity']; ?></div>
+                                </div>
+                                <div class="font-black text-amber-400">Rs. <?php echo number_format($item['price'] * $item['quantity'], 0); ?></div>
                             </div>
                         <?php endforeach; ?>
                     </div>
+                </section>
 
-                    <div class="flex justify-between items-center pt-2 border-t border-zinc-800 font-black text-base">
-                        <span>Total:</span>
-                        <span class="text-amber-400 text-lg">Rs. <?php echo number_format($order['total_amount'] ?? $order['total'] ?? 0, 2); ?></span>
-                    </div>
-                </div>
+                <!-- Right Column: Settlement & Payment Options -->
+                <section class="bg-zinc-900/90 border border-zinc-800 rounded-3xl p-5 shadow-2xl space-y-4">
+                    <h3 class="text-sm font-black text-white border-b border-zinc-800 pb-3 flex items-center gap-2">
+                        <span>💳</span> Settlement & Payment Options
+                    </h3>
 
-                <!-- PAYMENT SECTION - UNLOCKS ONLY WHEN SERVED -->
-                <?php if ($is_completed): ?>
-                    <div class="bg-zinc-950/90 border border-emerald-500/30 rounded-2xl p-4 text-center space-y-3">
-                        <h3 class="text-sm font-black text-emerald-400">🎉 Order Served! Select Payment Option</h3>
-
-                        <div class="grid grid-cols-2 gap-2">
-                            <button id="payQrTabBtn" onclick="selectPaymentMethod('qr')" class="p-3 rounded-xl border border-amber-500 bg-amber-500/10 text-amber-400 font-bold text-xs active:scale-95">
-                                💳 Digital QR
-                            </button>
-                            <button id="payCashTabBtn" onclick="selectPaymentMethod('cash')" class="p-3 rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-300 font-bold text-xs active:scale-95">
-                                💵 Pay Cash
-                            </button>
+                    <div class="space-y-3">
+                        <div class="bg-zinc-950 border border-zinc-800 rounded-2xl p-4 space-y-3">
+                            <div class="font-extrabold text-xs text-white flex items-center gap-2">
+                                <span>💵</span> Option 1: Cash at Table
+                            </div>
+                            <p class="text-[11px] text-zinc-400">Pay cash or card to the waiter when your food is served to Table <?php echo $table_num; ?>.</p>
                         </div>
 
-                        <div id="digitalQrPaySection" style="display: block;" class="pt-2">
-                            <?php if ($payment_settings && !empty($payment_settings['qr_code_image'])): ?>
-                                <img src="images/<?php echo htmlspecialchars($payment_settings['qr_code_image']); ?>" alt="Payment QR" class="max-w-[160px] mx-auto rounded-xl border-2 border-amber-500 p-2 bg-white mb-3">
-                                <a href="images/<?php echo htmlspecialchars($payment_settings['qr_code_image']); ?>" download="Payment_QR_Order_<?php echo $order['id']; ?>.jpg" class="h-10 px-4 rounded-xl bg-amber-500 text-zinc-950 font-black text-xs inline-flex items-center gap-1">
-                                    📥 Download Payment QR
-                                </a>
+                        <div class="bg-zinc-950 border border-amber-500/30 rounded-2xl p-4 space-y-3">
+                            <div class="font-extrabold text-xs text-amber-400 flex items-center gap-2">
+                                <span>📱</span> Option 2: Digital Scan & Pay (eSewa / Khalti)
+                            </div>
+                            <p class="text-[11px] text-zinc-400">
+                                <?php echo htmlspecialchars($setting['payment_note'] ?? 'Scan QR code below to make online payment'); ?>
+                            </p>
+
+                            <?php if (!empty($setting['qr_code_image'])): ?>
+                                <div class="p-3 bg-white rounded-2xl inline-block shadow-lg border border-amber-500/50 text-center w-full">
+                                    <img src="images/<?php echo htmlspecialchars($setting['qr_code_image']); ?>" alt="Merchant Payment QR" class="w-48 h-48 mx-auto object-contain">
+                                </div>
+                            <?php else: ?>
+                                <div class="p-3 bg-zinc-900 border border-zinc-800 rounded-xl text-center text-xs font-bold text-amber-400">
+                                    Scan QR code on table to pay via mobile banking
+                                </div>
                             <?php endif; ?>
                         </div>
-
-                        <div id="cashPaySection" style="display: none;" class="pt-2">
-                            <div class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold space-y-1">
-                                <div class="text-2xl">💵</div>
-                                <h4>Cash Payment Requested</h4>
-                                <p class="text-[11px] text-zinc-300">A waiter has been dispatched to Table <?php echo $table_number; ?> to collect cash payment.</p>
-                            </div>
-                        </div>
                     </div>
-                <?php else: ?>
-                    <div class="bg-zinc-950/60 border border-zinc-800/80 rounded-2xl p-4 text-center space-y-1">
-                        <div class="text-2xl">⏳</div>
-                        <h4 class="text-xs font-bold text-zinc-300">Payment Options Locked</h4>
-                        <p class="text-[11px] text-zinc-500">Payment QR code and cash payment options will automatically unlock here once your order is served by the kitchen.</p>
-                    </div>
-                <?php endif; ?>
 
-                <a href="menu.php?table=<?php echo urlencode($table_number); ?>" class="h-12 w-full rounded-2xl bg-amber-500 text-zinc-950 font-black text-sm flex items-center justify-center active:scale-95 shadow-lg shadow-amber-500/20">
-                    + Order More Dishes
-                </a>
-            <?php endif; ?>
-        </div>
+                    <a href="menu.php?table=<?php echo urlencode($table_num); ?>" class="h-12 w-full rounded-2xl bg-amber-500 text-zinc-950 font-black text-xs flex items-center justify-center active:scale-95 shadow-lg shadow-amber-500/20">
+                        + Add More Items to Table <?php echo $table_num; ?>
+                    </a>
+                </section>
+
+            </div>
+
+        <?php endif; ?>
+
     </main>
-
-    <!-- Fixed Bottom Tab Bar -->
-    <nav class="fixed bottom-0 left-0 right-0 z-40 max-w-md mx-auto bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800/80 flex justify-around items-center h-16 rounded-t-2xl px-2">
-        <a href="menu.php?table=<?php echo urlencode($table_number); ?>" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
-            <span class="text-lg">🍽️</span>
-            <span>Menu</span>
-        </a>
-        <a href="cart.php?table=<?php echo urlencode($table_number); ?>" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
-            <span class="text-lg">🛒</span>
-            <span>Cart</span>
-            <span class="cart-badge absolute top-1 right-2 bg-amber-500 text-zinc-950 font-black text-[9px] w-4 h-4 rounded-full flex items-center justify-center" style="display: none;">0</span>
-        </a>
-        <button onclick="callWaiter()" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
-            <span class="text-lg">🔔</span>
-            <span>Waiter</span>
-        </button>
-        <a href="order-success.php?table=<?php echo urlencode($table_number); ?>&order_id=<?php echo $order['id']; ?>" class="flex flex-col items-center gap-0.5 text-amber-500 font-extrabold text-[10px]">
-            <span class="text-lg">📋</span>
-            <span>Tracker</span>
-        </a>
-    </nav>
 
     <script src="js/modern.js"></script>
     <script>
-        const currentOrderId = <?php echo $order['id'] ?? 0; ?>;
-        const currentStatus = "<?php echo $order_status; ?>";
+        const currentOrderId = <?php echo $order_id; ?>;
+        let currentOrderStatus = '<?php echo strtolower($order['status'] ?? 'new'); ?>';
 
-        function selectPaymentMethod(method) {
-            document.getElementById('digitalQrPaySection').style.display = (method === 'qr') ? 'block' : 'none';
-            document.getElementById('cashPaySection').style.display = (method === 'cash') ? 'block' : 'none';
-
+        // Continuous Live Status Polling every 3.5 seconds
+        function checkLiveOrderStatus() {
             if (!currentOrderId) return;
-            fetch('api/update-order.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ order_id: currentOrderId, payment_method: method })
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success && method === 'cash') {
-                    showToast('💵 Cash payment requested! Waiter notified to Table <?php echo $table_number; ?>', 'success');
-                }
-            });
-        }
-
-        function pollOrderStatus() {
-            if (!currentOrderId) return;
-            fetch('api/orders.php?id=' + currentOrderId)
+            fetch('api/get-order-status.php?order_id=' + currentOrderId)
                 .then(r => r.json())
                 .then(data => {
-                    if (data.order && data.order.status !== currentStatus) {
-                        window.location.reload();
+                    if (data.success && data.order) {
+                        const newStatus = data.order.status.toLowerCase();
+                        if (newStatus !== currentOrderStatus) {
+                            currentOrderStatus = newStatus;
+                            window.location.reload();
+                        }
                     }
-                });
+                })
+                .catch(err => console.error(err));
         }
 
-        if (currentOrderId && currentStatus !== 'completed' && currentStatus !== 'cancelled') {
-            setInterval(pollOrderStatus, 5000);
-        }
+        document.addEventListener('DOMContentLoaded', () => {
+            setInterval(checkLiveOrderStatus, 3500);
+        });
     </script>
 </body>
 </html>

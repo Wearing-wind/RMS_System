@@ -31,12 +31,12 @@ if (isset($_SERVER['CONTENT_TYPE']) && strpos($_SERVER['CONTENT_TYPE'], 'applica
     $table_number = sanitize($input_data['table_number'] ?? '1');
     $customer_name = sanitize($input_data['customer_name'] ?? '');
     $notes = sanitize($input_data['notes'] ?? '');
-    $cart = $input_data['cart'] ?? [];
+    $cart = $input_data['cart'] ?? $input_data['items'] ?? [];
 } else {
     $table_number = sanitize($_POST['table_number'] ?? '1');
     $customer_name = sanitize($_POST['customer_name'] ?? '');
     $notes = sanitize($_POST['notes'] ?? '');
-    $cart_json = isset($_POST['cart_data']) ? $_POST['cart_data'] : '[]';
+    $cart_json = isset($_POST['cart_data']) ? $_POST['cart_data'] : (isset($_POST['cart']) ? $_POST['cart'] : '[]');
     $cart = json_decode($cart_json, true) ?: [];
 }
 

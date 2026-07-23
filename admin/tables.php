@@ -1,5 +1,5 @@
 <?php
-// Admin Tables & Seating Management - Tailwind Mobile Architecture
+// Admin Tables & Seating Management - Responsive Adaptive Architecture
 require_once '../config.php';
 requireAdminLogin();
 
@@ -114,91 +114,138 @@ $base_url = $scheme . $host . str_replace('/admin', '', $uri_dir);
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="min-h-full pb-24 font-sans antialiased selection:bg-amber-500 selection:text-zinc-950">
+<body class="min-h-full font-sans antialiased selection:bg-amber-500 selection:text-zinc-950">
 
-    <!-- Header -->
-    <header class="sticky top-0 z-40 bg-zinc-950/90 backdrop-blur-xl border-b border-zinc-800/80 px-4 py-3.5">
-        <div class="max-w-md mx-auto flex items-center justify-between gap-2">
-            <a href="index.php" class="flex items-center gap-2 font-black text-lg text-white">
-                <span>📍</span>
-                <span>Restaurant Seating</span>
-            </a>
-            <a href="index.php" class="text-xs font-bold text-amber-400">Dashboard →</a>
+    <!-- DESKTOP LEFT SIDEBAR -->
+    <aside class="hidden md:flex flex-col w-64 fixed inset-y-0 left-0 bg-zinc-950 border-r border-zinc-800/80 p-5 z-40">
+        <div class="flex items-center gap-3 pb-6 border-b border-zinc-800/80">
+            <span class="text-3xl">☕</span>
+            <div>
+                <h2 class="font-black text-white text-base leading-tight">QR Cafe</h2>
+                <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Manager Console</p>
+            </div>
         </div>
-    </header>
 
-    <main class="max-w-md mx-auto px-4 pt-3 space-y-4">
-
-        <!-- Navigation Carousel -->
-        <nav class="flex gap-2 overflow-x-auto no-scrollbar py-1">
-            <a href="index.php" class="px-4 py-2.5 rounded-2xl font-bold text-xs bg-zinc-900 border border-zinc-800 text-zinc-300 whitespace-nowrap">📊 Dashboard</a>
-            <a href="menu-items.php" class="px-4 py-2.5 rounded-2xl font-bold text-xs bg-zinc-900 border border-zinc-800 text-zinc-300 whitespace-nowrap">🍔 Menu Items</a>
-            <a href="orders.php" class="px-4 py-2.5 rounded-2xl font-bold text-xs bg-zinc-900 border border-zinc-800 text-zinc-300 whitespace-nowrap">📋 Live Orders</a>
-            <a href="tables.php" class="px-4 py-2.5 rounded-2xl font-black text-xs bg-amber-500 text-zinc-950 shadow-lg shadow-amber-500/20 whitespace-nowrap">📍 Tables</a>
+        <nav class="flex-1 space-y-1.5 pt-6">
+            <a href="index.php" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-zinc-400 hover:text-white hover:bg-zinc-900 font-bold text-xs transition-all">
+                <span class="text-lg">📊</span>
+                <span>Dashboard Summary</span>
+            </a>
+            <a href="orders.php" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-zinc-400 hover:text-white hover:bg-zinc-900 font-bold text-xs transition-all">
+                <span class="text-lg">📋</span>
+                <span>Live Orders Queue</span>
+            </a>
+            <a href="menu-items.php" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-zinc-400 hover:text-white hover:bg-zinc-900 font-bold text-xs transition-all">
+                <span class="text-lg">🍔</span>
+                <span>Menu Inventory</span>
+            </a>
+            <a href="tables.php" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-500 text-zinc-950 font-black text-xs shadow-lg shadow-amber-500/20">
+                <span class="text-lg">📍</span>
+                <span>Seating & Tables</span>
+            </a>
+            <a href="categories.php" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-zinc-400 hover:text-white hover:bg-zinc-900 font-bold text-xs transition-all">
+                <span class="text-lg">🏷️</span>
+                <span>Categories</span>
+            </a>
+            <a href="payment-settings.php" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-zinc-400 hover:text-white hover:bg-zinc-900 font-bold text-xs transition-all">
+                <span class="text-lg">💳</span>
+                <span>Payment QR Config</span>
+            </a>
         </nav>
 
-        <!-- Quick Add Table Card -->
-        <section class="bg-zinc-900/90 border border-zinc-800 rounded-3xl p-4 shadow-2xl space-y-2">
-            <h3 class="text-xs font-extrabold text-zinc-300 flex items-center gap-1.5">
-                <span>➕</span> Add New Table
-            </h3>
-            <form method="POST" action="tables.php" class="flex gap-2">
-                <input type="hidden" name="action" value="add">
-                <input type="text" name="table_number" value="<?php echo $suggested_table; ?>" placeholder="Table # (e.g. <?php echo $suggested_table; ?>)" required class="flex-1 h-11 bg-zinc-950 border border-zinc-800 rounded-2xl px-4 text-sm text-white placeholder-zinc-500 outline-none focus:border-amber-500 font-bold">
-                <button type="submit" class="h-11 px-5 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-zinc-950 font-black text-xs active:scale-95 shadow-lg shadow-amber-500/10 shrink-0">
-                    + Add Table
-                </button>
-            </form>
-        </section>
+        <div class="pt-4 border-t border-zinc-800/80">
+            <a href="logout.php" class="flex items-center gap-2 text-xs font-bold text-rose-400 hover:text-rose-300">
+                <span>🚪</span> Logout Administrator
+            </a>
+        </div>
+    </aside>
 
-        <?php if (isset($_SESSION['success'])): ?>
-            <div class="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-2">
-                <span>✅</span> <span><?php echo $_SESSION['success']; unset($_SESSION['success']); ?></span>
-            </div>
-        <?php endif; ?>
+    <!-- MAIN CONTENT AREA -->
+    <div class="md:pl-64 min-h-screen pb-24 md:pb-8">
 
-        <?php if (isset($_SESSION['error'])): ?>
-            <div class="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-bold flex items-center gap-2">
-                <span>⚠️</span> <span><?php echo $_SESSION['error']; unset($_SESSION['error']); ?></span>
-            </div>
-        <?php endif; ?>
-
-        <!-- Tables Mobile Card Grid -->
-        <section class="space-y-2 mb-20">
-            <h3 class="text-xs font-extrabold text-zinc-400 uppercase tracking-wider">Seating Grid (Tap Table for QR & Actions)</h3>
-
-            <?php if (empty($tables)): ?>
-                <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 text-center text-zinc-500">
-                    <div class="text-3xl mb-2">📍</div>
-                    <h3 class="font-bold">No tables added yet</h3>
+        <!-- Header -->
+        <header class="sticky top-0 z-40 bg-zinc-950/90 backdrop-blur-xl border-b border-zinc-800/80 px-4 md:px-8 py-4">
+            <div class="max-w-7xl mx-auto flex items-center justify-between gap-2">
+                <div>
+                    <h1 class="text-lg md:text-xl font-black text-white">Restaurant Seating & Tables</h1>
+                    <p class="text-xs text-zinc-400 hidden sm:block">Manage dining tables, active status, and printable QR codes</p>
                 </div>
-            <?php else: ?>
-                <div class="grid grid-cols-3 gap-2.5">
-                    <?php foreach ($tables as $t): ?>
-                        <?php 
-                        $menu_link = rtrim($base_url, '/') . '/menu.php?table=' . urlencode($t['table_number']); 
-                        $has_active = !empty($t['active_order']);
-                        $order_id = $has_active ? $t['active_order']['id'] : 0;
-                        $order_status = $has_active ? strtoupper($t['active_order']['status']) : 'VACANT';
-                        ?>
-                        <div onclick="openTableHostSheet('<?php echo htmlspecialchars($t['table_number']); ?>', <?php echo $order_id; ?>, '<?php echo $order_status; ?>', '<?php echo $menu_link; ?>', <?php echo $t['id']; ?>)" class="bg-zinc-900/90 border <?php echo $has_active ? 'border-amber-500/50' : 'border-zinc-800'; ?> rounded-3xl p-3 text-center cursor-pointer active:scale-95 transition-all">
-                            <div class="text-2xl mb-1"><?php echo $has_active ? '🍽️' : '🛋️'; ?></div>
-                            <div class="font-black text-sm text-white">Table <?php echo htmlspecialchars($t['table_number']); ?></div>
-                            <div class="text-[10px] font-black mt-1 <?php echo $has_active ? 'text-amber-400' : 'text-zinc-500'; ?>">
-                                <?php echo $has_active ? '🔥 #' . $order_id : '🟢 VACANT'; ?>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto px-4 md:px-8 pt-4 space-y-6">
+
+            <!-- Mobile Navigation Carousel (Hidden on md: desktop) -->
+            <nav class="md:hidden flex gap-2 overflow-x-auto no-scrollbar py-1">
+                <a href="index.php" class="px-4 py-2.5 rounded-2xl font-bold text-xs bg-zinc-900 border border-zinc-800 text-zinc-300 whitespace-nowrap">📊 Dashboard</a>
+                <a href="menu-items.php" class="px-4 py-2.5 rounded-2xl font-bold text-xs bg-zinc-900 border border-zinc-800 text-zinc-300 whitespace-nowrap">🍔 Menu Items</a>
+                <a href="orders.php" class="px-4 py-2.5 rounded-2xl font-bold text-xs bg-zinc-900 border border-zinc-800 text-zinc-300 whitespace-nowrap">📋 Live Orders</a>
+                <a href="tables.php" class="px-4 py-2.5 rounded-2xl font-black text-xs bg-amber-500 text-zinc-950 shadow-lg shadow-amber-500/20 whitespace-nowrap">📍 Tables</a>
+            </nav>
+
+            <!-- Quick Add Table Card -->
+            <section class="bg-zinc-900/90 border border-zinc-800 rounded-3xl p-5 shadow-xl space-y-3">
+                <h3 class="text-xs font-extrabold text-zinc-300 flex items-center gap-1.5 uppercase tracking-wider">
+                    <span>➕</span> Add New Table
+                </h3>
+                <form method="POST" action="tables.php" class="flex flex-col sm:flex-row gap-3">
+                    <input type="hidden" name="action" value="add">
+                    <input type="text" name="table_number" value="<?php echo $suggested_table; ?>" placeholder="Table # (e.g. <?php echo $suggested_table; ?>)" required class="flex-1 h-12 bg-zinc-950 border border-zinc-800 rounded-2xl px-4 text-sm text-white placeholder-zinc-500 outline-none focus:border-amber-500 font-bold">
+                    <button type="submit" class="h-12 px-6 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-zinc-950 font-black text-sm active:scale-95 shadow-lg shadow-amber-500/10 shrink-0">
+                        + Add Table
+                    </button>
+                </form>
+            </section>
+
+            <?php if (isset($_SESSION['success'])): ?>
+                <div class="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-2">
+                    <span>✅</span> <span><?php echo $_SESSION['success']; unset($_SESSION['success']); ?></span>
                 </div>
             <?php endif; ?>
-        </section>
 
-    </main>
+            <?php if (isset($_SESSION['error'])): ?>
+                <div class="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-bold flex items-center gap-2">
+                    <span>⚠️</span> <span><?php echo $_SESSION['error']; unset($_SESSION['error']); ?></span>
+                </div>
+            <?php endif; ?>
 
-    <!-- Table Host View & QR Code Bottom Sheet -->
-    <div id="tableHostSheet" class="fixed inset-0 z-50 flex items-end justify-center opacity-0 pointer-events-none transition-all duration-300">
+            <!-- Adaptive Seating Grid (3 cols mobile, 4-6 cols desktop) -->
+            <section class="space-y-3">
+                <h3 class="text-xs font-extrabold text-zinc-400 uppercase tracking-wider">Seating Grid (Click Table for Printable QR Code & Host Actions)</h3>
+
+                <?php if (empty($tables)): ?>
+                    <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 text-center text-zinc-500">
+                        <div class="text-3xl mb-2">📍</div>
+                        <h3 class="font-bold">No tables added yet</h3>
+                    </div>
+                <?php else: ?>
+                    <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3.5">
+                        <?php foreach ($tables as $t): ?>
+                            <?php 
+                            $menu_link = rtrim($base_url, '/') . '/menu.php?table=' . urlencode($t['table_number']); 
+                            $has_active = !empty($t['active_order']);
+                            $order_id = $has_active ? $t['active_order']['id'] : 0;
+                            $order_status = $has_active ? strtoupper($t['active_order']['status']) : 'VACANT';
+                            ?>
+                            <div onclick="openTableHostSheet('<?php echo htmlspecialchars($t['table_number']); ?>', <?php echo $order_id; ?>, '<?php echo $order_status; ?>', '<?php echo $menu_link; ?>', <?php echo $t['id']; ?>)" class="bg-zinc-900/90 border <?php echo $has_active ? 'border-amber-500/50 bg-amber-500/5' : 'border-zinc-800'; ?> rounded-3xl p-4 text-center cursor-pointer active:scale-95 hover:border-amber-500/80 transition-all shadow-lg">
+                                <div class="text-3xl mb-1.5"><?php echo $has_active ? '🍽️' : '🛋️'; ?></div>
+                                <div class="font-black text-sm text-white">Table <?php echo htmlspecialchars($t['table_number']); ?></div>
+                                <div class="text-[10px] font-black mt-1 <?php echo $has_active ? 'text-amber-400' : 'text-zinc-500'; ?>">
+                                    <?php echo $has_active ? '🔥 #' . $order_id : '🟢 VACANT'; ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Table Host View & QR Code Bottom Sheet / Modal -->
+    <div id="tableHostSheet" class="fixed inset-0 z-50 flex items-end md:items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
         <div class="absolute inset-0 bg-zinc-950/80 backdrop-blur-md" onclick="closeTableHostSheet()"></div>
-        <div class="relative z-10 w-full max-w-md bg-zinc-900 border-t border-zinc-800 rounded-t-3xl p-6 shadow-2xl translate-y-full transition-transform duration-300 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div class="relative z-10 w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-t-3xl md:rounded-3xl p-6 shadow-2xl translate-y-full md:translate-y-0 transition-transform duration-300 space-y-4 max-h-[90vh] overflow-y-auto">
             <button onclick="closeTableHostSheet()" class="absolute top-4 right-4 bg-zinc-800 text-zinc-400 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm">✕</button>
             
             <div class="text-center">
@@ -239,8 +286,8 @@ $base_url = $scheme . $host . str_replace('/admin', '', $uri_dir);
         </div>
     </div>
 
-    <!-- Manager Bottom Navigation Bar -->
-    <nav class="fixed bottom-0 left-0 right-0 z-40 max-w-md mx-auto bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800/80 flex justify-around items-center h-16 rounded-t-2xl px-2">
+    <!-- Mobile Bottom Navigation Bar (Hidden on md: desktop) -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 max-w-md mx-auto bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800/80 flex justify-around items-center h-16 rounded-t-2xl px-2">
         <a href="index.php" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
             <span class="text-lg">📊</span>
             <span>Summary</span>
@@ -290,7 +337,7 @@ $base_url = $scheme . $host . str_replace('/admin', '', $uri_dir);
 
             const sheet = document.getElementById('tableHostSheet');
             sheet.classList.remove('opacity-0', 'pointer-events-none');
-            sheet.children[1].classList.remove('translate-y-full');
+            sheet.children[1].classList.remove('translate-y-full', 'md:translate-y-0');
         }
 
         function closeTableHostSheet() {
