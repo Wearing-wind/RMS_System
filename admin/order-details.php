@@ -1,11 +1,10 @@
 <?php
-// Admin Order Details
+// Admin Order Details - Mobile First
 require_once '../config.php';
 requireAdminLogin();
 
 $conn = getDBConnection();
 
-// Get order
 $order_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 $stmt = $conn->prepare("SELECT * FROM orders WHERE id = ?");
@@ -20,7 +19,6 @@ if (!$order) {
     exit;
 }
 
-// Get order items
 $items_stmt = $conn->prepare("
     SELECT oi.*, mi.name 
     FROM order_items oi 
@@ -38,91 +36,133 @@ while ($item = $items_result->fetch_assoc()) {
     $total += $item['price'] * $item['quantity'];
 }
 $items_stmt->close();
-
 $conn->close();
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Order #<?php echo $order_id; ?> - QR Restaurant Admin</title>
-    <link rel="stylesheet" href="../css/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0c0907">
+    <title>Order #<?php echo $order_id; ?> Details - QR Cafe</title>
+    <link rel="manifest" href="../manifest.json">
+    <link rel="stylesheet" href="../css/spatial.css">
 </head>
 <body>
-    <!-- Admin Header -->
-    <header class="admin-header">
-        <div class="container">
-            <a href="index.php" class="admin-logo">🍽️ Admin Panel</a>
-            <nav class="admin-nav">
-                <a href="index.php">Dashboard</a>
-                <a href="menu-items.php">Menu Items</a>
-                <a href="categories.php">Categories</a>
-                <a href="tables.php">Tables & QR</a>
-                <a href="orders.php" class="active">Orders</a>
-                <a href="logout.php">Logout</a>
-            </nav>
+    <!-- Mobile Header -->
+    <header class="header">
+        <div class="mobile-app-shell">
+            <a href="orders.php" class="logo">
+                <span>📋</span> Order #<?php echo $order_id; ?>
+            </a>
+            <a href="orders.php" style="color: var(--primary); text-decoration: none; font-size: 0.8rem; font-weight: 700;">← Back to Orders</a>
         </div>
     </header>
 
-    <!-- Admin Content -->
-    <section class="admin-content">
-        <div class="container">
-            <a href="orders.php" class="back-btn">← Back to Orders</a>
-            <h1>Order #<?php echo $order_id; ?></h1>
-            
-            <div class="order-details" style="max-width: 600px;">
-                <div class="order-info-item">
-                    <span>Table Number:</span>
-                    <strong>Table <?php echo htmlspecialchars($order['table_number']); ?></strong>
+    <main class="mobile-app-shell" style="margin-top: 14px; margin-bottom: 20px;">
+        
+        <div class="spatial-card" style="padding: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; margin-bottom: 14px;">
+                <div>
+                    <h2 style="font-size: 1.2rem; font-weight: 800; font-family: var(--font-serif);">Order #<?php echo $order_id; ?></h2>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">📍 Table <?php echo htmlspecialchars($order['table_number']); ?></div>
+                </div>
+                <span style="font-weight: 800; font-size: 0.78rem; text-transform: uppercase; padding: 4px 10px; border-radius: var(--radius-pill); background: rgba(217, 155, 38, 0.2); color: var(--primary); border: 1px solid var(--primary);">
+                    <?php echo htmlspecialchars($order['status']); ?>
+                </span>
+            </div>
+
+            <div style="margin-bottom: 14px; font-size: 0.88rem;">
+                <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+                    <span style="color: var(--text-muted);">Created At:</span>
+                    <strong><?php echo htmlspecialchars($order['created_at']); ?></strong>
                 </div>
                 <?php if (!empty($order['customer_name'])): ?>
-                <div class="order-info-item">
-                    <span>Customer Name:</span>
-                    <strong><?php echo htmlspecialchars($order['customer_name']); ?></strong>
-                </div>
+                    <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+                        <span style="color: var(--text-muted);">Customer:</span>
+                        <strong><?php echo htmlspecialchars($order['customer_name']); ?></strong>
+                    </div>
                 <?php endif; ?>
-                <div class="order-info-item">
-                    <span>Status:</span>
-                    <span class="status-<?php echo $order['status']; ?>"><?php echo ucfirst($order['status']); ?></span>
-                </div>
-                <div class="order-info-item">
-                    <span>Order Date:</span>
-                    <span><?php echo date('F j, Y h:i A', strtotime($order['created_at'])); ?></span>
-                </div>
-                <div class="order-info-item">
-                    <span>Ordered Items:</span>
-                </div>
-                <?php foreach ($items as $item): ?>
-                <div class="order-info-item">
-                    <span style="padding-left: 20px;"><?php echo htmlspecialchars($item['name']); ?> x <?php echo $item['quantity']; ?></span>
-                    <strong>$<?php echo number_format($item['price'] * $item['quantity'], 2); ?></strong>
-                </div>
-                <?php endforeach; ?>
-                <div class="order-info-item" style="border-top: 2px solid #eee; margin-top: 10px; padding-top: 10px;">
-                    <span>Total:</span>
-                    <strong style="color: #667eea;">$<?php echo number_format($total, 2); ?></strong>
-                </div>
                 <?php if (!empty($order['notes'])): ?>
-                <div class="order-info-item">
-                    <span>Notes:</span>
-                    <span><?php echo htmlspecialchars($order['notes']); ?></span>
-                </div>
+                    <div style="background: rgba(217,155,38,0.1); border: 1px solid var(--glass-border); padding: 8px; border-radius: var(--radius-sm); margin-top: 8px;">
+                        <strong>📝 Notes:</strong> <?php echo htmlspecialchars($order['notes']); ?>
+                    </div>
                 <?php endif; ?>
             </div>
-            
-            <!-- Update Status -->
-            <?php if ($order['status'] !== 'completed' && $order['status'] !== 'cancelled'): ?>
-            <div style="margin-top: 20px;">
-                <h3>Update Status</h3>
-                <a href="orders.php?update_status=<?php echo $order_id; ?>&status=new" class="btn <?php echo $order['status'] === 'new' ? 'btn-primary' : ''; ?>">New</a>
-                <a href="orders.php?update_status=<?php echo $order_id; ?>&status=preparing" class="btn <?php echo $order['status'] === 'preparing' ? 'btn-primary' : ''; ?>">Preparing</a>
-                <a href="orders.php?update_status=<?php echo $order_id; ?>&status=ready" class="btn <?php echo $order['status'] === 'ready' ? 'btn-primary' : ''; ?>">Ready</a>
-                <a href="orders.php?update_status=<?php echo $order_id; ?>&status=completed" class="btn <?php echo $order['status'] === 'completed' ? 'btn-primary' : ''; ?>">Completed</a>
-                <a href="orders.php?update_status=<?php echo $order_id; ?>&status=cancelled" class="btn btn-danger" onclick="return confirm('Cancel this order?')">Cancel</a>
+
+            <h4 style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px;">Ordered Items:</h4>
+            <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px;">
+                <?php foreach ($items as $item): ?>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.88rem; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.03);">
+                        <span><?php echo htmlspecialchars($item['name']); ?> <strong style="color: var(--primary);">x<?php echo $item['quantity']; ?></strong></span>
+                        <span style="font-weight: 700; color: var(--primary);">Rs. <?php echo number_format($item['price'] * $item['quantity'], 2); ?></span>
+                    </div>
+                <?php endforeach; ?>
             </div>
-            <?php endif; ?>
+
+            <div style="display: flex; justify-content: space-between; border-top: 1px solid var(--glass-border); padding-top: 10px; font-size: 1.1rem; font-weight: 800; margin-bottom: 20px;">
+                <span>Total Amount:</span>
+                <span style="color: var(--primary);">Rs. <?php echo number_format($total, 2); ?></span>
+            </div>
+
+            <!-- Manage Order Action Buttons -->
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
+                <button onclick="updateOrderStatus(<?php echo $order_id; ?>, 'preparing')" class="add-to-cart-btn" style="min-height: 44px; background: rgba(245, 158, 11, 0.2); color: #fde68a; border: 1px solid var(--warning);">
+                    🔥 Start Prep
+                </button>
+                <button onclick="updateOrderStatus(<?php echo $order_id; ?>, 'ready')" class="add-to-cart-btn" style="min-height: 44px; background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid var(--success);">
+                    ✅ Mark Ready
+                </button>
+                <button onclick="updateOrderStatus(<?php echo $order_id; ?>, 'completed')" class="checkout-btn" style="grid-column: span 2; min-height: 44px; padding: 10px;">
+                    ✔ Mark Served / Done
+                </button>
+                <button onclick="updateOrderStatus(<?php echo $order_id; ?>, 'cancelled', 'Cancelled by Manager')" class="add-to-cart-btn" style="grid-column: span 2; min-height: 40px; background: rgba(244, 63, 94, 0.2); color: #fda4af; border: 1px solid var(--danger);">
+                    ❌ Cancel Order
+                </button>
+            </div>
         </div>
-    </section>
+
+    </main>
+
+    <!-- PINNED MOBILE BOTTOM NAVIGATION BAR FOR ADMIN -->
+    <nav class="mobile-nav-bar">
+        <a href="index.php" class="mobile-nav-item">
+            <span class="mobile-nav-icon">📊</span>
+            <span>Summary</span>
+        </a>
+        <a href="orders.php" class="mobile-nav-item active">
+            <span class="mobile-nav-icon">📋</span>
+            <span>Orders</span>
+        </a>
+        <a href="menu-items.php" class="mobile-nav-item">
+            <span class="mobile-nav-icon">🍔</span>
+            <span>Items</span>
+        </a>
+        <a href="../kitchen-dashboard.php" class="mobile-nav-item">
+            <span class="mobile-nav-icon">👨‍🍳</span>
+            <span>KDS</span>
+        </a>
+    </nav>
+
+    <script src="../js/modern.js"></script>
+    <script>
+        function updateOrderStatus(orderId, status, reason = '') {
+            fetch('../api/update-order.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ order_id: orderId, status: status, reason: reason })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Order status updated!', 'success');
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    showToast(data.message || 'Error updating order', 'error');
+                }
+            })
+            .catch(err => console.error(err));
+        }
+    </script>
 </body>
 </html>

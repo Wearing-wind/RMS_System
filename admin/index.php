@@ -1,488 +1,211 @@
 <?php
-// Admin Dashboard - Main Page
+// Manager Dashboard - Mobile-Native Tailwind Architecture
 require_once '../config.php';
 requireAdminLogin();
 
 $conn = getDBConnection();
-
-// Get stats
 $today = date('Y-m-d');
 
-// Total orders today
-$result = $conn->query("SELECT COUNT(*) as count FROM orders WHERE DATE(created_at) = '$today'");
-$today_orders = $result->fetch_assoc()['count'];
+// Statistics
+$today_orders = ($conn->query("SELECT COUNT(*) as count FROM orders WHERE DATE(created_at) = '$today'")->fetch_assoc()['count']) ?: 0;
+$completed_orders = ($conn->query("SELECT COUNT(*) as count FROM orders WHERE DATE(created_at) = '$today' AND status = 'completed'")->fetch_assoc()['count']) ?: 0;
+$today_sales = ($conn->query("SELECT COALESCE(SUM(oi.quantity * oi.price), 0) as total FROM order_items oi JOIN orders o ON oi.order_id = o.id WHERE DATE(o.created_at) = '$today'")->fetch_assoc()['total']) ?: 0;
+$active_orders_count = ($conn->query("SELECT COUNT(*) as count FROM orders WHERE status IN ('new', 'preparing', 'ready')")->fetch_assoc()['count']) ?: 0;
 
-// Total completed orders today
-$result = $conn->query("SELECT COUNT(*) as count FROM orders WHERE DATE(created_at) = '$today' AND status = 'completed'");
-$completed_orders = $result->fetch_assoc()['count'];
-
-// Total sales today
-$result = $conn->query("SELECT SUM(oi.quantity * oi.price) as total FROM order_items oi JOIN orders o ON oi.order_id = o.id WHERE DATE(o.created_at) = '$today'");
-$today_sales = $result->fetch_assoc()['total'] ?: 0;
-
-// Total orders
-$result = $conn->query("SELECT COUNT(*) as count FROM orders");
-$total_orders = $result->fetch_assoc()['count'];
-
-// Weekly stats
-$result = $conn->query("SELECT COUNT(*) as count, SUM(oi.quantity * oi.price) as total FROM orders o JOIN order_items oi ON o.id = oi.order_id WHERE o.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)");
-$weekly_stats = $result->fetch_assoc();
-$weekly_orders = $weekly_stats['count'] ?: 0;
-$weekly_sales = $weekly_stats['total'] ?: 0;
-
-// Monthly stats
-$result = $conn->query("SELECT COUNT(*) as count, SUM(oi.quantity * oi.price) as total FROM orders o JOIN order_items oi ON o.id = oi.order_id WHERE o.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)");
-$monthly_stats = $result->fetch_assoc();
-$monthly_orders = $monthly_stats['count'] ?: 0;
-$monthly_sales = $monthly_stats['total'] ?: 0;
-
-// Get daily orders for the last 7 days for chart
-$daily_sales = [];
-for ($i = 6; $i >= 0; $i--) {
-    $day = date('Y-m-d', strtotime("-$i days"));
-    $result = $conn->query("SELECT COALESCE(SUM(oi.quantity * oi.price), 0) as total FROM orders o JOIN order_items oi ON o.id = oi.order_id WHERE DATE(o.created_at) = '$day'");
-    $daily_sales[] = $result->fetch_assoc()['total'] ?: 0;
+// Live Queue
+$live_orders_res = $conn->query("SELECT * FROM orders WHERE status IN ('new', 'preparing', 'ready') ORDER BY created_at DESC LIMIT 10");
+$live_orders = [];
+if ($live_orders_res) {
+    while ($row = $live_orders_res->fetch_assoc()) {
+        $live_orders[] = $row;
+    }
 }
 
-// Get category distribution
-$category_sales = [];
-$result = $conn->query("
-    SELECT c.name, SUM(oi.quantity * oi.price) as total 
-    FROM order_items oi 
-    JOIN menu_items mi ON oi.menu_item_id = mi.id 
-    JOIN categories c ON mi.category_id = c.id 
-    GROUP BY c.id 
-    ORDER BY total DESC
-    LIMIT 5
-");
-while ($row = $result->fetch_assoc()) {
-    $category_sales[] = $row;
+// Quick Inventory List for On-the-fly Toggles
+$menu_items_res = $conn->query("SELECT * FROM menu_items ORDER BY category_id, name LIMIT 8");
+$inventory_items = [];
+if ($menu_items_res) {
+    while ($item = $menu_items_res->fetch_assoc()) {
+        $inventory_items[] = $item;
+    }
 }
-
-// Top selling items
-$result = $conn->query("
-    SELECT mi.name, SUM(oi.quantity) as total_quantity, SUM(oi.quantity * oi.price) as total_sales 
-    FROM order_items oi 
-    JOIN menu_items mi ON oi.menu_item_id = mi.id 
-    GROUP BY mi.id 
-    ORDER BY total_quantity DESC 
-    LIMIT 5
-");
-$top_items = [];
-while ($row = $result->fetch_assoc()) {
-    $top_items[] = $row;
-}
-
-// Recent orders
-$recent_orders = $conn->query("SELECT * FROM orders ORDER BY created_at DESC LIMIT 10");
-
-$conn->close();
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full bg-zinc-950 text-zinc-100">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - QR Restaurant</title>
-    <link rel="stylesheet" href="../css/modern.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#09090b">
+    <title>Manager Dashboard - QR Cafe</title>
+    <link rel="manifest" href="../manifest.json">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              amber: {
+                500: '#f59e0b',
+                600: '#d97706',
+              }
+            }
+          }
+        }
+      }
+    </script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background: #f5f6fa; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
-        .admin-header { background: linear-gradient(135deg, #ff6b35, #ff8c5a); padding: 15px 0; }
-        .admin-header .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
-        .admin-logo { color: white; font-size: 1.5rem; font-weight: bold; text-decoration: none; }
-        .admin-nav { display: flex; gap: 8px; flex-wrap: wrap; }
-        .admin-nav a { color: rgba(255,255,255,0.8); text-decoration: none; padding: 10px 18px; border-radius: 25px; font-weight: 600; font-size: 0.9rem; transition: all 0.3s; }
-        .admin-nav a:hover, .admin-nav a.active { background: rgba(255,255,255,0.2); color: white; }
-        .admin-content { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
-        .admin-content h1 { color: #2d3436; margin-bottom: 25px; font-size: 2rem; }
-        .admin-content h2 { color: #2d3436; margin: 25px 0 15px; }
-        .admin-table { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 2px 15px rgba(0,0,0,0.1); }
-        .admin-table table { width: 100%; border-collapse: collapse; }
-        .admin-table th { background: #ff6b35; color: white; padding: 15px; text-align: left; }
-        .admin-table td { padding: 15px; border-bottom: 1px solid #dfe6e9; }
-        .admin-table tr:hover { background: #f8f9fa; }
-        .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; text-decoration: none; display: inline-block; font-weight: 600; }
-        .btn-primary { background: #ff6b35; color: white; }
-        .btn-sm { padding: 5px 10px; font-size: 0.85rem; }
-        .actions { display: flex; gap: 10px; }
-        .order-status { padding: 4px 12px; border-radius: 15px; font-weight: 600; font-size: 0.85rem; }
-        .order-status.new { background: #ff7675; color: white; }
-        .order-status.preparing { background: #fdcb6e; color: #2d3436; }
-        .order-status.ready { background: #00b894; color: white; }
-        .order-status.completed { background: #00b894; color: white; }
-        .admin-stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        
-        .admin-stat-card {
-            background: var(--white);
-            border-radius: var(--radius);
-            padding: 25px;
-            box-shadow: var(--shadow);
-            transition: var(--transition);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .admin-stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 5px;
-            height: 100%;
-        }
-        
-        .admin-stat-card.orders::before { background: var(--primary); }
-        .admin-stat-card.completed::before { background: var(--success); }
-        .admin-stat-card.sales::before { background: #00b894; }
-        .admin-stat-card.total::before { background: #6c5ce7; }
-        
-        .admin-stat-card:hover {
-            transform: translateY(-5px);
-        }
-        
-        .admin-stat-card h3 {
-            color: var(--gray);
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 10px;
-        }
-        
-        .admin-stat-card .number {
-            font-size: 2.2rem;
-            font-weight: 800;
-            color: var(--secondary);
-        }
-        
-        .admin-stat-card .number.highlight {
-            color: var(--primary);
-        }
-        
-        .admin-stat-card .trend {
-            font-size: 0.85rem;
-            margin-top: 8px;
-            color: var(--gray);
-        }
-        
-        .admin-stat-card .trend.up {
-            color: var(--success);
-        }
-        
-        .charts-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 25px;
-            margin-bottom: 30px;
-        }
-        
-        .chart-card {
-            background: var(--white);
-            border-radius: var(--radius);
-            padding: 25px;
-            box-shadow: var(--shadow);
-        }
-        
-        .chart-card h3 {
-            margin-bottom: 20px;
-            color: var(--secondary);
-        }
-        
-        .top-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .top-item:last-child {
-            border-bottom: none;
-        }
-        
-        .top-item-name {
-            font-weight: 600;
-            color: var(--secondary);
-        }
-        
-        .top-item-qty {
-            color: var(--primary);
-            font-weight: 700;
-        }
-        
-        .top-item-sales {
-            color: var(--success);
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-        
-        .quick-actions {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
-        }
-        
-        .quick-action-btn {
-            background: var(--light);
-            border: none;
-            padding: 20px;
-            border-radius: var(--radius-sm);
-            cursor: pointer;
-            text-align: center;
-            transition: var(--transition);
-        }
-        
-        .quick-action-btn:hover {
-            background: var(--primary);
-            color: white;
-        }
-        
-        .quick-action-btn .icon {
-            font-size: 2rem;
-            margin-bottom: 10px;
-        }
-        
-        .quick-action-btn .label {
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
+        body { overscroll-behavior-y: contain; -webkit-tap-highlight-color: transparent; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body>
-    <!-- Admin Header -->
-    <header class="admin-header">
-        <div class="container">
-            <a href="index.php" class="admin-logo">🍽️ Admin Panel</a>
-            <nav class="admin-nav">
-                <a href="index.php" class="active">Dashboard</a>
-                <a href="menu-items.php">Menu Items</a>
-                <a href="categories.php">Categories</a>
-                <a href="tables.php">Tables & QR</a>
-                <a href="orders.php">Orders</a>
-                <a href="payment-settings.php">Payment Settings</a>
-                <a href="logout.php">Logout</a>
-            </nav>
+<body class="min-h-full pb-24 font-sans antialiased selection:bg-amber-500 selection:text-zinc-950">
+
+    <!-- Sticky Header -->
+    <header class="sticky top-0 z-40 bg-zinc-950/90 backdrop-blur-xl border-b border-zinc-800/80 px-4 py-3.5">
+        <div class="max-w-md mx-auto flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2 font-black text-lg text-white">
+                <span class="text-xl">📊</span>
+                <span>Manager Control</span>
+            </div>
+            <a href="logout.php" class="text-xs font-extrabold text-rose-400 bg-rose-500/10 border border-rose-500/20 px-3 py-1.5 rounded-full">Logout 🚪</a>
         </div>
     </header>
 
-    <!-- Admin Content -->
-    <section class="admin-content">
-        <div class="container">
-            <h1>📊 Dashboard</h1>
-            
-            <!-- Stats -->
-            <div class="admin-stats-grid">
-                <div class="admin-stat-card orders">
-                    <h3>📋 Orders Today</h3>
-                    <div class="number"><?php echo $today_orders; ?></div>
-                    <div class="trend up">↑ <?php echo $completed_orders; ?> completed</div>
+    <main class="max-w-md mx-auto px-4 pt-3 space-y-4">
+
+        <!-- Admin Module Quick Navigation Carousel -->
+        <nav class="flex gap-2 overflow-x-auto no-scrollbar py-1">
+            <a href="index.php" class="px-4 py-2.5 rounded-2xl font-black text-xs bg-amber-500 text-zinc-950 shadow-lg shadow-amber-500/20 whitespace-nowrap">📊 Dashboard</a>
+            <a href="menu-items.php" class="px-4 py-2.5 rounded-2xl font-bold text-xs bg-zinc-900 border border-zinc-800 text-zinc-300 whitespace-nowrap">🍔 Menu Items</a>
+            <a href="orders.php" class="px-4 py-2.5 rounded-2xl font-bold text-xs bg-zinc-900 border border-zinc-800 text-zinc-300 whitespace-nowrap">📋 Live Orders</a>
+            <a href="tables.php" class="px-4 py-2.5 rounded-2xl font-bold text-xs bg-zinc-900 border border-zinc-800 text-zinc-300 whitespace-nowrap">📍 Tables</a>
+        </nav>
+
+        <!-- 2x2 Modern Metrics Cards Grid -->
+        <section>
+            <h3 class="text-xs font-extrabold text-zinc-400 uppercase tracking-wider mb-2.5">Today's Performance</h3>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-zinc-900/90 border border-zinc-800 rounded-3xl p-4 flex flex-col justify-between">
+                    <div class="text-xs font-bold text-zinc-400">💰 Sales Today</div>
+                    <div class="text-2xl font-black text-amber-400 mt-2">Rs. <?php echo number_format($today_sales, 0); ?></div>
                 </div>
-                <div class="admin-stat-card completed">
-                    <h3>✅ Completed Today</h3>
-                    <div class="number"><?php echo $completed_orders; ?></div>
-                    <div class="trend">of <?php echo $today_orders; ?> total</div>
+                <div class="bg-zinc-900/90 border border-zinc-800 rounded-3xl p-4 flex flex-col justify-between">
+                    <div class="text-xs font-bold text-zinc-400">🔥 Active Orders</div>
+                    <div class="text-2xl font-black text-cyan-400 mt-2"><?php echo $active_orders_count; ?></div>
                 </div>
-                <div class="admin-stat-card sales">
-                    <h3>💰 Sales Today</h3>
-                    <div class="number highlight">Rs. <?php echo number_format($today_sales, 0); ?></div>
+                <div class="bg-zinc-900/90 border border-zinc-800 rounded-3xl p-4 flex flex-col justify-between">
+                    <div class="text-xs font-bold text-zinc-400">✅ Served Today</div>
+                    <div class="text-2xl font-black text-emerald-400 mt-2"><?php echo $completed_orders; ?></div>
                 </div>
-                <div class="admin-stat-card total">
-                    <h3>📈 This Month</h3>
-                    <div class="number"><?php echo $monthly_orders; ?></div>
-                    <div class="trend">Rs. <?php echo number_format($monthly_sales, 0); ?> revenue</div>
+                <div class="bg-zinc-900/90 border border-zinc-800 rounded-3xl p-4 flex flex-col justify-between">
+                    <div class="text-xs font-bold text-zinc-400">📋 Total Orders</div>
+                    <div class="text-2xl font-black text-white mt-2"><?php echo $today_orders; ?></div>
                 </div>
             </div>
-            
-            <!-- Visual Bar Chart -->
-            <div class="charts-grid">
-                <div class="chart-card">
-                    <h3>📊 Daily Sales (Last 7 Days)</h3>
-                    <div class="bar-chart">
-                        <?php 
-                        $max_sale = max($daily_sales);
-                        if ($max_sale == 0) $max_sale = 1;
-                        $days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                        $today_day = date('N') - 1;
-                        for ($i = 6; $i >= 0; $i--) {
-                            $day_index = ($today_day - $i + 7) % 7;
-                            $height = ($daily_sales[6-$i] / $max_sale) * 100;
-                        ?>
-                        <div class="bar-item">
-                            <div class="bar-container">
-                                <div class="bar" style="height: <?php echo $height; ?>%"></div>
+        </section>
+
+        <!-- Quick Live Orders Stream -->
+        <section class="bg-zinc-900/90 border border-zinc-800/80 rounded-3xl p-4">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="font-extrabold text-sm text-white flex items-center gap-1.5">
+                    <span>⚡</span> Active Order Stream
+                </h3>
+                <a href="orders.php" class="text-xs font-bold text-amber-400">View All →</a>
+            </div>
+
+            <?php if (empty($live_orders)): ?>
+                <div class="text-center py-6 text-xs text-zinc-500">No active orders in stream</div>
+            <?php else: ?>
+                <div class="space-y-2">
+                    <?php foreach ($live_orders as $order): ?>
+                        <div class="bg-zinc-950/70 border border-zinc-800/60 rounded-2xl p-3 flex justify-between items-center">
+                            <div>
+                                <div class="font-extrabold text-xs text-white">Order #<?php echo $order['id']; ?> • Table <?php echo htmlspecialchars($order['table_number']); ?></div>
+                                <div class="text-[11px] text-zinc-400">Status: <span class="text-amber-400 font-bold"><?php echo strtoupper($order['status']); ?></span></div>
                             </div>
-                            <div class="bar-label"><?php echo $days[$day_index]; ?></div>
-                            <div class="bar-value">Rs. <?php echo number_format($daily_sales[6-$i], 0); ?></div>
+                            <a href="order-details.php?id=<?php echo $order['id']; ?>" class="px-3 py-1.5 rounded-xl bg-amber-500 text-zinc-950 font-black text-xs active:scale-95">Manage</a>
                         </div>
-                        <?php } ?>
-                    </div>
+                    <?php endforeach; ?>
                 </div>
-                
-                <div class="chart-card">
-                    <h3>📈 Sales by Category</h3>
-                    <?php if (count($category_sales) > 0): ?>
-                        <?php $max_cat_values = array_column($category_sales, 'total'); $max_cat = max($max_cat_values); if ($max_cat == 0) $max_cat = 1; ?>
-                        <?php foreach ($category_sales as $cat): ?>
-                            <div class="category-bar">
-                                <div class="category-label"><?php echo htmlspecialchars($cat['name']); ?></div>
-                                <div class="category-bar-bg">
-                                    <div class="category-bar-fill" style="width: <?php echo ($cat['total'] / $max_cat) * 100; ?>%"></div>
-                                </div>
-                                <div class="category-value">Rs. <?php echo number_format($cat['total'], 0); ?></div>
+            <?php endif; ?>
+        </section>
+
+        <!-- Quick Inventory Stock Toggles -->
+        <section class="bg-zinc-900/90 border border-zinc-800/80 rounded-3xl p-4 mb-20">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="font-extrabold text-sm text-white flex items-center gap-1.5">
+                    <span>📦</span> Quick Stock Control
+                </h3>
+                <a href="menu-items.php" class="text-xs font-bold text-amber-400">Manage All →</a>
+            </div>
+
+            <div class="space-y-2">
+                <?php foreach ($inventory_items as $item): ?>
+                    <?php $is_active = ($item['status'] === 'active'); ?>
+                    <div class="bg-zinc-950/70 border border-zinc-800/60 rounded-2xl p-3 flex justify-between items-center">
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-lg">🍽️</span>
+                            <div>
+                                <div class="font-extrabold text-xs text-white"><?php echo htmlspecialchars($item['name']); ?></div>
+                                <div class="text-[11px] text-amber-400 font-bold">Rs. <?php echo number_format($item['price'], 0); ?></div>
                             </div>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <p style="color: var(--gray);">No category data yet</p>
-                    <?php endif; ?>
-                </div>
-            </div>
-            
-            <style>
-                .bar-chart {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: flex-end;
-                    height: 200px;
-                    padding-top: 20px;
-                }
-                .bar-item {
-                    flex: 1;
-                    text-align: center;
-                    margin: 0 5px;
-                }
-                .bar-container {
-                    height: 150px;
-                    background: #f0f0f0;
-                    border-radius: 8px 8px 0 0;
-                    display: flex;
-                    align-items: flex-end;
-                    overflow: hidden;
-                }
-                .bar {
-                    width: 100%;
-                    background: linear-gradient(180deg, #ff6b35, #ff8c5a);
-                    border-radius: 8px 8px 0 0;
-                    min-height: 5px;
-                    transition: height 0.5s ease;
-                }
-                .bar-label {
-                    font-size: 0.75rem;
-                    font-weight: 600;
-                    color: var(--gray);
-                    margin-top: 8px;
-                }
-                .bar-value {
-                    font-size: 0.65rem;
-                    color: var(--secondary);
-                    font-weight: 600;
-                }
-                .category-bar {
-                    margin-bottom: 15px;
-                }
-                .category-label {
-                    font-weight: 600;
-                    color: var(--secondary);
-                    margin-bottom: 5px;
-                }
-                .category-bar-bg {
-                    height: 25px;
-                    background: #f0f0f0;
-                    border-radius: 12px;
-                    overflow: hidden;
-                }
-                .category-bar-fill {
-                    height: 100%;
-                    background: linear-gradient(90deg, #00b894, #55efc4);
-                    border-radius: 12px;
-                    transition: width 0.5s ease;
-                }
-                .category-value {
-                    font-size: 0.85rem;
-                    color: var(--gray);
-                    margin-top: 3px;
-                    text-align: right;
-                }
-            </style>
-            
-            <!-- Charts & Top Items -->
-            <div class="charts-grid">
-                <div class="chart-card">
-                    <h3>🏆 Top Selling Items</h3>
-                    <?php if (count($top_items) > 0): ?>
-                        <?php foreach ($top_items as $index => $item): ?>
-                            <div class="top-item">
-                                <span class="top-item-name"><?php echo ($index + 1) . '. ' . htmlspecialchars($item['name']); ?></span>
-                                <div>
-                                    <span class="top-item-qty"><?php echo $item['total_quantity']; ?> sold</span>
-                                    <span class="top-item-sales">Rs. <?php echo number_format($item['total_sales'], 0); ?></span>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <p style="color: var(--gray);">No sales data yet</p>
-                    <?php endif; ?>
-                </div>
-                
-                <div class="chart-card">
-                    <h3>⚡ Quick Actions</h3>
-                    <div class="quick-actions">
-                        <button class="quick-action-btn" onclick="window.location.href='menu-items.php?action=add'">
-                            <div class="icon">➕</div>
-                            <div class="label">Add Item</div>
-                        </button>
-                        <button class="quick-action-btn" onclick="window.location.href='orders.php'">
-                            <div class="icon">📋</div>
-                            <div class="label">View Orders</div>
-                        </button>
-                        <button class="quick-action-btn" onclick="window.location.href='../kitchen-dashboard.php'">
-                            <div class="icon">👨‍🍳</div>
-                            <div class="label">Kitchen</div>
-                        </button>
-                        <button class="quick-action-btn" onclick="window.location.href='tables.php'">
-                            <div class="icon">🪑</div>
-                            <div class="label">Tables</div>
-                        </button>
+                        </div>
+
+                        <!-- Instant Switch Toggle -->
+                        <div class="flex items-center gap-2">
+                            <span id="stock-lbl-<?php echo $item['id']; ?>" class="text-[10px] font-black <?php echo $is_active ? 'text-emerald-400' : 'text-rose-400'; ?>">
+                                <?php echo $is_active ? 'In Stock' : 'Sold Out'; ?>
+                            </span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" <?php echo $is_active ? 'checked' : ''; ?> onchange="toggleItemStock(<?php echo $item['id']; ?>, this.checked)" class="sr-only peer">
+                                <div class="w-11 h-6 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                            </label>
+                        </div>
                     </div>
-                </div>
+                <?php endforeach; ?>
             </div>
-            
-            <!-- Recent Orders -->
-            <h2>📝 Recent Orders</h2>
-            <div class="admin-table">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Order ID</th>
-                            <th>Table</th>
-                            <th>Customer</th>
-                            <th>Status</th>
-                            <th>Time</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php while ($order = $recent_orders->fetch_assoc()): ?>
-                        <tr>
-                            <td>#<?php echo $order['id']; ?></td>
-                            <td>Table <?php echo htmlspecialchars($order['table_number']); ?></td>
-                            <td><?php echo htmlspecialchars($order['customer_name'] ?: '-'); ?></td>
-                            <td><span class="order-status <?php echo $order['status']; ?>"><?php echo ucfirst($order['status']); ?></span></td>
-                            <td><?php echo date('h:i A', strtotime($order['created_at'])); ?></td>
-                            <td class="actions">
-                                <a href="order-details.php?id=<?php echo $order['id']; ?>" class="btn btn-sm btn-primary">View</a>
-                            </td>
-                        </tr>
-                        <?php endwhile; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </section>
+        </section>
+
+    </main>
+
+    <!-- Fixed Bottom Tab Bar -->
+    <nav class="fixed bottom-0 left-0 right-0 z-40 max-w-md mx-auto bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800/80 flex justify-around items-center h-16 rounded-t-2xl px-2">
+        <a href="index.php" class="flex flex-col items-center gap-0.5 text-amber-500 font-extrabold text-[10px]">
+            <span class="text-lg">📊</span>
+            <span>Summary</span>
+        </a>
+        <a href="orders.php" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
+            <span class="text-lg">📋</span>
+            <span>Orders</span>
+        </a>
+        <a href="menu-items.php" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
+            <span class="text-lg">🍔</span>
+            <span>Items</span>
+        </a>
+        <a href="../kitchen-dashboard.php" class="flex flex-col items-center gap-0.5 text-zinc-400 font-bold text-[10px]">
+            <span class="text-lg">👨‍🍳</span>
+            <span>KDS</span>
+        </a>
+    </nav>
+
+    <script src="../js/modern.js"></script>
+    <script>
+        function toggleItemStock(itemId, isChecked) {
+            const status = isChecked ? 'active' : 'sold_out';
+            const label = document.getElementById('stock-lbl-' + itemId);
+            fetch('menu-items.php?action=toggle_status&id=' + itemId + '&status=' + status)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        if (label) {
+                            label.textContent = isChecked ? 'In Stock' : 'Sold Out';
+                            label.className = 'text-[10px] font-black ' + (isChecked ? 'text-emerald-400' : 'text-rose-400');
+                        }
+                        showToast(isChecked ? 'Item marked In Stock!' : 'Item marked Sold Out!', isChecked ? 'success' : 'warning');
+                    }
+                });
+        }
+    </script>
 </body>
 </html>

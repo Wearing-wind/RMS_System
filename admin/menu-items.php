@@ -1,15 +1,37 @@
 <?php
-// Admin Menu Items Management
+// Admin Menu Items Management - Mobile First & Instant Availability Toggle
 require_once '../config.php';
 requireAdminLogin();
 
 $conn = getDBConnection();
 
 if ($conn === null) {
-    die("Database not connected. Please run setup.php first.");
+    die("Database not connected.");
 }
 
-// Handle form submissions
+// Handle AJAX Instant Toggle Switch Request
+if (isset($_GET['action']) && $_GET['action'] === 'toggle_status') {
+    header('Content-Type: application/json');
+    $id = intval($_GET['id']);
+    $new_status = sanitize($_GET['status']);
+    
+    if ($id > 0 && in_array($new_status, ['active', 'sold_out', 'inactive'])) {
+        $stmt = $conn->prepare("UPDATE menu_items SET status = ? WHERE id = ?");
+        $stmt->bind_param("si", $new_status, $id);
+        if ($stmt->execute()) {
+            echo json_encode(['success' => true, 'status' => $new_status]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Failed to update status']);
+        }
+        $stmt->close();
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Invalid parameters']);
+    }
+    $conn->close();
+    exit;
+}
+
+// Handle standard form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action'])) {
         if ($_POST['action'] === 'add') {
@@ -17,337 +39,224 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $description = sanitize($_POST['description']);
             $price = floatval($_POST['price']);
             $category_id = intval($_POST['category_id']);
-            $status = isset($_POST['status']) ? 'active' : 'inactive';
+            $status = isset($_POST['status']) ? 'active' : 'sold_out';
+            $dietary_type = sanitize($_POST['dietary_type'] ?? 'veg');
             
-            // Handle image upload
             $image = '';
             if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
                 $upload_dir = '../images/';
                 $file_name = time() . '_' . basename($_FILES['image']['name']);
                 $target_file = $upload_dir . $file_name;
-                
                 if (move_uploaded_file($_FILES['image']['tmp_name'], $target_file)) {
                     $image = $file_name;
                 }
             }
             
-            $stmt = $conn->prepare("INSERT INTO menu_items (name, description, price, image, category_id, status) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("ssdsis", $name, $description, $price, $image, $category_id, $status);
+            $stmt = $conn->prepare("INSERT INTO menu_items (name, description, price, image, category_id, status, dietary_type) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param("ssdsiss", $name, $description, $price, $image, $category_id, $status, $dietary_type);
             $stmt->execute();
             $stmt->close();
             
-            $_SESSION['success'] = 'Menu item added successfully';
-        } elseif ($_POST['action'] === 'edit') {
+            $_SESSION['success'] = 'Item added successfully';
+        } elseif ($_POST['action'] === 'delete') {
             $id = intval($_POST['id']);
-            $name = sanitize($_POST['name']);
-            $description = sanitize($_POST['description']);
-            $price = floatval($_POST['price']);
-            $category_id = intval($_POST['category_id']);
-            $status = isset($_POST['status']) ? 'active' : 'inactive';
-            
-            // Check if new image uploaded
-            if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-                $upload_dir = '../images/';
-                $file_name = time() . '_' . basename($_FILES['image']['name']);
-                $target_file = $upload_dir . $file_name;
-                
-                if (move_uploaded_file($_FILES['image']['tmp_name'], $target_file)) {
-                    $stmt = $conn->prepare("UPDATE menu_items SET name = ?, description = ?, price = ?, image = ?, category_id = ?, status = ? WHERE id = ?");
-                    $stmt->bind_param("ssdsisi", $name, $description, $price, $file_name, $category_id, $status, $id);
-                    $stmt->execute();
-                    $stmt->close();
-                    
-                    $_SESSION['success'] = 'Menu item updated successfully';
-                    header('Location: menu-items.php');
-                    exit;
-                }
-            }
-            
-            $stmt = $conn->prepare("UPDATE menu_items SET name = ?, description = ?, price = ?, category_id = ?, status = ? WHERE id = ?");
-            $stmt->bind_param("ssdisi", $name, $description, $price, $category_id, $status, $id);
+            $stmt = $conn->prepare("DELETE FROM menu_items WHERE id = ?");
+            $stmt->bind_param("i", $id);
             $stmt->execute();
             $stmt->close();
-            
-            $_SESSION['success'] = 'Menu item updated successfully';
+            $_SESSION['success'] = 'Item deleted successfully';
         }
     }
-}
-
-// Handle delete
-if (isset($_GET['delete'])) {
-    $id = intval($_GET['delete']);
-    $conn->query("DELETE FROM menu_items WHERE id = $id");
-    $_SESSION['success'] = 'Menu item deleted successfully';
     header('Location: menu-items.php');
     exit;
 }
 
-// Handle toggle popular
-if (isset($_GET['toggle_popular'])) {
-    $id = intval($_GET['toggle_popular']);
-    $status = intval($_GET['status']);
-    $conn->query("UPDATE menu_items SET is_popular = $status WHERE id = $id");
-    $_SESSION['success'] = $status ? 'Item marked as popular' : 'Item removed from popular';
-    header('Location: menu-items.php');
-    exit;
+// Get categories & items
+$categories_res = $conn->query("SELECT * FROM categories ORDER BY name");
+$categories = [];
+while ($cat = $categories_res->fetch_assoc()) {
+    $categories[$cat['id']] = $cat['name'];
 }
 
-// Handle toggle sold out
-if (isset($_GET['toggle_sold_out'])) {
-    $id = intval($_GET['toggle_sold_out']);
-    $status = sanitize($_GET['status']);
-    $conn->query("UPDATE menu_items SET status = '$status' WHERE id = $id");
-    $_SESSION['success'] = $status === 'sold_out' ? 'Item marked as sold out' : 'Item is now in stock';
-    header('Location: menu-items.php');
-    exit;
+$items_res = $conn->query("SELECT * FROM menu_items ORDER BY category_id, name");
+$items = [];
+while ($item = $items_res->fetch_assoc()) {
+    $items[] = $item;
 }
-
-// Get categories for dropdown
-$categories = $conn->query("SELECT * FROM categories ORDER BY name");
-
-// Get menu items
-$menu_items = $conn->query("
-    SELECT mi.*, c.name as category_name 
-    FROM menu_items mi 
-    LEFT JOIN categories c ON mi.category_id = c.id 
-    ORDER BY c.name, mi.name
-");
-
-$conn->close();
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Menu Items - QR Restaurant Admin</title>
-    <link rel="stylesheet" href="../css/modern.css">
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background: #f5f6fa; }
-        .admin-header { background: linear-gradient(135deg, #ff6b35, #ff8c5a); padding: 15px 0; }
-        .admin-header .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; }
-        .admin-logo { color: white; font-size: 1.5rem; font-weight: bold; text-decoration: none; }
-        .admin-nav { display: flex; gap: 8px; flex-wrap: wrap; }
-        .admin-nav a { color: rgba(255,255,255,0.8); text-decoration: none; padding: 10px 18px; border-radius: 25px; font-weight: 600; font-size: 0.9rem; transition: all 0.3s; }
-        .admin-nav a:hover, .admin-nav a.active { background: rgba(255,255,255,0.2); color: white; }
-        .admin-content { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
-        .admin-content h1 { color: #2d3436; margin-bottom: 25px; font-size: 2rem; }
-        .alert { padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; text-decoration: none; display: inline-block; font-weight: 600; }
-        .btn-primary { background: #ff6b35; color: white; }
-        .btn-success { background: #27ae60; color: white; }
-        .btn-danger { background: #e74c3c; color: white; }
-        .btn-warning { background: #f39c12; color: white; }
-        .btn-sm { padding: 5px 10px; font-size: 0.85rem; }
-        .form-card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 2px 15px rgba(0,0,0,0.1); margin-bottom: 30px; }
-        .form-card h2 { margin-top: 0; color: #2d3436; }
-        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; color: #2d3436; font-weight: 600; }
-        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 2px solid #dfe6e9; border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
-        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #ff6b35; }
-        .admin-table { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 2px 15px rgba(0,0,0,0.1); }
-        .admin-table table { width: 100%; border-collapse: collapse; }
-        .admin-table th { background: #ff6b35; color: white; padding: 15px; text-align: left; }
-        .admin-table td { padding: 15px; border-bottom: 1px solid #dfe6e9; }
-        .admin-table tr:hover { background: #f8f9fa; }
-        .status-active { color: #27ae60; font-weight: 600; }
-        .status-inactive { color: #e74c3c; font-weight: 600; }
-        .status-sold_out { color: #e74c3c; font-weight: 600; }
-        .actions { display: flex; gap: 8px; flex-wrap: wrap; }
-        .popular-indicator { margin-left: 5px; }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0c0907">
+    <title>Menu Items Manager - QR Cafe</title>
+    <link rel="manifest" href="../manifest.json">
+    <link rel="stylesheet" href="../css/spatial.css">
 </head>
 <body>
-    <!-- Admin Header -->
-    <header class="admin-header">
-        <div class="container">
-            <a href="index.php" class="admin-logo">🍽️ Admin Panel</a>
-            <nav class="admin-nav">
-                <a href="index.php">Dashboard</a>
-                <a href="menu-items.php" class="active">Menu Items</a>
-                <a href="categories.php">Categories</a>
-                <a href="tables.php">Tables & QR</a>
-                <a href="orders.php">Orders</a>
-                <a href="payment-settings.php">Payment Settings</a>
-                <a href="logout.php">Logout</a>
-            </nav>
+    <!-- Mobile Header -->
+    <header class="header">
+        <div class="mobile-app-shell">
+            <a href="index.php" class="logo">
+                <span>🍔</span> Menu Items Manager
+            </a>
+            <button onclick="document.getElementById('addItemFormCard').scrollIntoView({behavior:'smooth'})" class="add-to-cart-btn" style="padding: 6px 12px; font-size: 0.78rem;">
+                + Add Item
+            </button>
         </div>
     </header>
 
-    <!-- Admin Content -->
-    <section class="admin-content">
-        <h1>Menu Items Management</h1>
-        
+    <main class="mobile-app-shell" style="margin-top: 14px; margin-bottom: 20px;">
+
+        <!-- Admin Quick Nav Tabs -->
+        <div class="category-nav-scroll" style="margin-bottom: 14px;">
+            <a href="index.php" class="category-btn">📊 Dashboard</a>
+            <a href="menu-items.php" class="category-btn active">🍔 Menu Items</a>
+            <a href="orders.php" class="category-btn">📋 All Orders</a>
+            <a href="tables.php" class="category-btn">📍 Tables</a>
+        </div>
+
         <?php if (isset($_SESSION['success'])): ?>
-            <div class="alert alert-success"><?php echo $_SESSION['success']; unset($_SESSION['success']); ?></div>
+            <div style="background: rgba(34, 197, 94, 0.15); border: 1px solid var(--success); color: #4ade80; padding: 10px; border-radius: var(--radius-sm); margin-bottom: 14px; font-size: 0.85rem;">
+                <?php echo $_SESSION['success']; unset($_SESSION['success']); ?>
+            </div>
         <?php endif; ?>
-        
-        <!-- Add New Button -->
-        <button class="btn btn-primary" onclick="document.getElementById('addForm').style.display='block'">
-            + Add Menu Item
-        </button>
-        
-        <!-- Add Form -->
-        <div id="addForm" class="form-card" style="display: none; margin-top: 20px;">
-            <h2>Add New Menu Item</h2>
+
+        <h3 style="font-size: 1rem; font-weight: 800; font-family: var(--font-serif); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+            <span>Instant Stock Toggle</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 400;">Tap switch to toggle Sold Out / Active</span>
+        </h3>
+
+        <!-- Mobile Cards List View (Replaces Wide Desktop Table) -->
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px;">
+            <?php foreach ($items as $item): ?>
+                <?php 
+                $is_active = ($item['status'] === 'active');
+                $dietary = strtolower($item['dietary_type'] ?? 'veg');
+                $dietary_tag = ($dietary === 'non-veg') ? '<span class="dietary-tag non-veg"></span>' : '<span class="dietary-tag veg"></span>';
+                ?>
+                <div class="menu-item" id="item-card-<?php echo $item['id']; ?>">
+                    <div class="menu-item-image">
+                        <?php if (!empty($item['image'])): ?>
+                            <img src="../images/<?php echo htmlspecialchars($item['image']); ?>" alt="item" onerror="this.parentElement.innerHTML='🍽️'">
+                        <?php else: ?>
+                            🍽️
+                        <?php endif; ?>
+                    </div>
+                    
+                    <div class="menu-item-content">
+                        <div class="menu-item-name">
+                            <?php echo $dietary_tag; ?> <?php echo htmlspecialchars($item['name']); ?>
+                        </div>
+                        <div style="font-size: 0.76rem; color: var(--text-muted);">
+                            Category: <?php echo htmlspecialchars($categories[$item['category_id']] ?? 'General'); ?>
+                        </div>
+                        <div class="menu-item-price" style="margin-top: 4px;">
+                            Rs. <?php echo number_format($item['price'], 0); ?>
+                        </div>
+                    </div>
+
+                    <!-- Instant Toggle Switch Cell -->
+                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+                        <label class="toggle-switch" title="Toggle Item Availability">
+                            <input type="checkbox" <?php echo $is_active ? 'checked' : ''; ?> onchange="toggleItemAvailability(<?php echo $item['id']; ?>, this.checked)">
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span id="status-label-<?php echo $item['id']; ?>" style="font-size: 0.7rem; font-weight: 800; color: <?php echo $is_active ? 'var(--success)' : 'var(--danger)'; ?>;">
+                            <?php echo $is_active ? 'Available' : 'Sold Out'; ?>
+                        </span>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+
+        <!-- Add Item Form Card -->
+        <div class="spatial-card" id="addItemFormCard" style="padding: 16px;">
+            <h3 style="font-size: 1.05rem; font-weight: 800; font-family: var(--font-serif); margin-bottom: 12px;">+ Add New Menu Item</h3>
             <form method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="add">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Name</label>
-                        <input type="text" name="name" required>
+                
+                <div style="margin-bottom: 10px;">
+                    <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px;">Item Name</label>
+                    <input type="text" name="name" required style="width: 100%; background: rgba(14,11,8,0.8); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); padding: 10px; color: white; font-family: inherit; font-size: 0.88rem; outline: none;">
+                </div>
+
+                <div style="margin-bottom: 10px;">
+                    <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px;">Category</label>
+                    <select name="category_id" required style="width: 100%; background: rgba(14,11,8,0.8); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); padding: 10px; color: white; font-family: inherit; font-size: 0.88rem; outline: none;">
+                        <?php foreach ($categories as $cat_id => $cat_name): ?>
+                            <option value="<?php echo $cat_id; ?>"><?php echo htmlspecialchars($cat_name); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 10px; display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px;">Price (Rs.)</label>
+                        <input type="number" step="0.01" name="price" required style="width: 100%; background: rgba(14,11,8,0.8); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); padding: 10px; color: white; font-family: inherit; font-size: 0.88rem; outline: none;">
                     </div>
-                    <div class="form-group">
-                        <label>Category</label>
-                        <select name="category_id" required>
-                            <?php while ($cat = $categories->fetch_assoc()): ?>
-                                <option value="<?php echo $cat['id']; ?>"><?php echo htmlspecialchars($cat['name']); ?></option>
-                            <?php endwhile; ?>
+                    <div style="flex: 1;">
+                        <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px;">Dietary</label>
+                        <select name="dietary_type" style="width: 100%; background: rgba(14,11,8,0.8); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); padding: 10px; color: white; font-family: inherit; font-size: 0.88rem; outline: none;">
+                            <option value="veg">Vegetarian</option>
+                            <option value="non-veg">Non-Veg</option>
                         </select>
                     </div>
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Price (Rs.)</label>
-                        <input type="number" name="price" step="0.01" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Image</label>
-                        <input type="file" name="image" accept="image/*">
-                    </div>
+
+                <div style="margin-bottom: 14px;">
+                    <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px;">Description</label>
+                    <textarea name="description" rows="2" style="width: 100%; background: rgba(14,11,8,0.8); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); padding: 10px; color: white; font-family: inherit; font-size: 0.88rem; outline: none;"></textarea>
                 </div>
-                <div class="form-group">
-                    <label>Description</label>
-                    <textarea name="description" rows="3"></textarea>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" name="status" checked> Active
-                    </label>
-                </div>
-                <button type="submit" class="btn btn-success">Add Item</button>
-                <button type="button" class="btn btn-primary" onclick="document.getElementById('addForm').style.display='none'">Cancel</button>
+
+                <button type="submit" class="checkout-btn" style="padding: 12px;">Save Menu Item</button>
             </form>
         </div>
-        
-        <!-- Menu Items Table -->
-        <div class="admin-table" style="margin-top: 30px;">
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Category</th>
-                        <th>Price</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php 
-                    if ($menu_items && $menu_items->num_rows > 0):
-                        while ($item = $menu_items->fetch_assoc()): 
-                    ?>
-                    <tr>
-                        <td><?php echo $item['id']; ?></td>
-                        <td><?php echo htmlspecialchars($item['name']); ?></td>
-                        <td><?php echo htmlspecialchars($item['category_name'] ?? 'Uncategorized'); ?></td>
-                        <td>Rs. <?php echo number_format($item['price'], 0); ?></td>
-                        <td>
-                            <span class="status-<?php echo $item['status']; ?>"><?php echo ucfirst($item['status']); ?></span>
-                            <?php if (!empty($item['is_popular'])): ?>
-                                <span class="popular-indicator">⭐</span>
-                            <?php endif; ?>
-                        </td>
-                        <td class="actions">
-                            <button type="button" class="btn btn-sm btn-primary" onclick="editItem(<?php echo $item['id']; ?>, '<?php echo addslashes($item['name']); ?>', '<?php echo addslashes($item['description']); ?>', <?php echo $item['price']; ?>, <?php echo $item['category_id']; ?>, '<?php echo $item['status']; ?>')">Edit</button>
-                            
-                            <a href="menu-items.php?toggle_popular=<?php echo $item['id']; ?>&status=<?php echo $item['is_popular'] ? 0 : 1; ?>" class="btn btn-sm <?php echo $item['is_popular'] ? 'btn-warning' : 'btn-success'; ?>">
-                                <?php echo $item['is_popular'] ? '⭐ Unmark' : '⭐ Popular'; ?>
-                            </a>
-                            
-                            <a href="menu-items.php?toggle_sold_out=<?php echo $item['id']; ?>&status=<?php echo $item['status'] === 'sold_out' ? 'active' : 'sold_out'; ?>" class="btn btn-sm <?php echo $item['status'] === 'sold_out' ? 'btn-success' : 'btn-danger'; ?>">
-                                <?php echo $item['status'] === 'sold_out' ? '✓ In Stock' : '❌ Sold Out'; ?>
-                            </a>
-                        </td>
-                    </tr>
-                    <?php 
-                        endwhile;
-                    else:
-                    ?>
-                    <tr>
-                        <td colspan="6" style="text-align: center; padding: 30px;">No menu items found. Add some items to get started.</td>
-                    </tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
-        
-        <!-- Edit Form (Hidden) -->
-        <div id="editForm" class="form-card" style="display: none; margin-top: 30px;">
-            <h2>Edit Menu Item</h2>
-            <form method="POST" enctype="multipart/form-data">
-                <input type="hidden" name="action" value="edit">
-                <input type="hidden" name="id" id="editId">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Name</label>
-                        <input type="text" name="name" id="editName" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Category</label>
-                        <select name="category_id" id="editCategory" required>
-                            <?php 
-                            $categories = $conn->query("SELECT * FROM categories ORDER BY name");
-                            while ($cat = $categories->fetch_assoc()): ?>
-                                <option value="<?php echo $cat['id']; ?>"><?php echo htmlspecialchars($cat['name']); ?></option>
-                            <?php endwhile; ?>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Price (Rs.)</label>
-                        <input type="number" name="price" id="editPrice" step="0.01" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Image (leave empty to keep current)</label>
-                        <input type="file" name="image" accept="image/*">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Description</label>
-                    <textarea name="description" id="editDescription" rows="3"></textarea>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" name="status" id="editStatus" checked> Active
-                    </label>
-                </div>
-                <button type="submit" class="btn btn-success">Update Item</button>
-                <button type="button" class="btn btn-primary" onclick="document.getElementById('editForm').style.display='none'">Cancel</button>
-            </form>
-        </div>
-    </section>
-    
+
+    </main>
+
+    <!-- PINNED MOBILE BOTTOM NAVIGATION BAR FOR ADMIN -->
+    <nav class="mobile-nav-bar">
+        <a href="index.php" class="mobile-nav-item">
+            <span class="mobile-nav-icon">📊</span>
+            <span>Summary</span>
+        </a>
+        <a href="orders.php" class="mobile-nav-item">
+            <span class="mobile-nav-icon">📋</span>
+            <span>Orders</span>
+        </a>
+        <a href="menu-items.php" class="mobile-nav-item active">
+            <span class="mobile-nav-icon">🍔</span>
+            <span>Items</span>
+        </a>
+        <a href="../kitchen-dashboard.php" class="mobile-nav-item">
+            <span class="mobile-nav-icon">👨‍🍳</span>
+            <span>KDS</span>
+        </a>
+    </nav>
+
+    <script src="../js/modern.js"></script>
     <script>
-        function editItem(id, name, description, price, category_id, status) {
-            document.getElementById('editId').value = id;
-            document.getElementById('editName').value = name;
-            document.getElementById('editDescription').value = description;
-            document.getElementById('editPrice').value = price;
-            document.getElementById('editCategory').value = category_id;
-            document.getElementById('editStatus').checked = (status === 'active');
-            document.getElementById('editForm').style.display = 'block';
-            window.scrollTo({top: document.getElementById('editForm').offsetTop, behavior: 'smooth'});
-        }
-        
-        function deleteItem(id) {
-            if (confirm('Are you sure you want to delete this item?')) {
-                window.location.href = 'menu-items.php?delete=' + id;
-            }
+        // Instant Availability Toggle Switch Handler
+        function toggleItemAvailability(itemId, isChecked) {
+            const status = isChecked ? 'active' : 'sold_out';
+            const label = document.getElementById('status-label-' + itemId);
+            
+            fetch('menu-items.php?action=toggle_status&id=' + itemId + '&status=' + status)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        if (label) {
+                            label.textContent = isChecked ? 'Available' : 'Sold Out';
+                            label.style.color = isChecked ? 'var(--success)' : 'var(--danger)';
+                        }
+                        showToast(isChecked ? 'Item marked Available!' : 'Item marked Sold Out!', isChecked ? 'success' : 'warning');
+                    } else {
+                        showToast('Error updating item availability', 'error');
+                    }
+                })
+                .catch(err => console.error(err));
         }
     </script>
 </body>

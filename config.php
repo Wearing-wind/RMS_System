@@ -92,6 +92,9 @@ function ensureDatabaseSchema($conn) {
     if (!in_array('is_popular', $menu_cols)) {
         @$conn->query("ALTER TABLE menu_items ADD COLUMN is_popular TINYINT(1) DEFAULT 0");
     }
+    if (!in_array('dietary_type', $menu_cols)) {
+        @$conn->query("ALTER TABLE menu_items ADD COLUMN dietary_type ENUM('veg', 'non-veg') DEFAULT 'veg'");
+    }
 }
 
 // Check if database is setup
