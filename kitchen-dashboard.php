@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kitchen Dashboard - QR Cafe</title>
     <link rel="stylesheet" href="css/spatial.css">
     <style>
@@ -13,7 +13,7 @@
 
     <!-- Header Bar -->
     <header class="kitchen-header">
-        <div class="kitchen-title" style="font-family: var(--font-sans); font-size: 1.3rem;">
+        <div class="kitchen-title" style="font-family: var(--font-serif); font-size: 1.4rem;">
             <span>👨‍🍳</span> Cafe Kitchen Control
         </div>
 
@@ -38,32 +38,32 @@
     </header>
 
     <!-- Waiter Calls Section -->
-    <div class="container" style="max-width: 1200px; margin-top: 16px; margin-bottom: 16px;">
-        <h3 style="font-size: 0.95rem; font-weight: 800; color: var(--text-secondary); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+    <div class="container" style="max-width: 1200px; margin-top: 20px; margin-bottom: 20px;">
+        <h3 style="font-size: 1rem; font-weight: 800; color: var(--text-secondary); margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
             <span>🔔</span> Table Waiter Calls
         </h3>
-        <div id="waiterCallsGrid" style="display: flex; gap: 10px; overflow-x: auto; white-space: nowrap; padding-bottom: 6px; scrollbar-width: none;">
+        <div id="waiterCallsGrid" style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 6px;">
             <div style="color: var(--text-muted); font-size: 0.85rem;">No active waiter calls</div>
         </div>
     </div>
 
-    <!-- Active / Completed / Rejected Tabs (HORIZONTAL ROW FOR MOBILE LAYOUT) -->
+    <!-- Active / Completed / Rejected Tabs -->
     <div class="container" style="max-width: 1200px;">
-        <div style="display: flex; flex-direction: row; gap: 10px; overflow-x: auto; white-space: nowrap; flex-wrap: nowrap; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; scrollbar-width: none;">
-            <button class="category-btn active" id="tabActiveBtn" style="flex-shrink: 0;" onclick="switchTab('active')">
+        <div class="category-nav-scroll" style="border-bottom: 1px solid var(--glass-border); padding-bottom: 10px;">
+            <button class="category-btn active" id="tabActiveBtn" onclick="switchTab('active')">
                 📋 Active Orders (<span id="activeOrdersTabCount">0</span>)
             </button>
-            <button class="category-btn" id="tabCompletedBtn" style="flex-shrink: 0;" onclick="switchTab('completed')">
+            <button class="category-btn" id="tabCompletedBtn" onclick="switchTab('completed')">
                 ✅ Completed Orders
             </button>
-            <button class="category-btn" id="tabRejectedBtn" style="flex-shrink: 0;" onclick="switchTab('cancelled')">
+            <button class="category-btn" id="tabRejectedBtn" onclick="switchTab('cancelled')">
                 🚫 Rejected Orders
             </button>
         </div>
     </div>
 
     <!-- Orders Grid -->
-    <main style="display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; padding: 16px; max-width: 1200px; margin: 0 auto;" id="kitchenOrdersGrid">
+    <main style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; padding: 20px; max-width: 1200px; margin: 0 auto;" id="kitchenOrdersGrid">
         <div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 40px;">
             Loading kitchen orders...
         </div>
@@ -141,12 +141,12 @@
                         grid.innerHTML = '<div style="color: var(--text-muted); font-size: 0.85rem;">No active waiter calls</div>';
                     } else {
                         grid.innerHTML = calls.map(c => `
-                            <div class="spatial-card" style="padding: 10px 16px; display: flex; align-items: center; gap: 14px; min-width: 180px; flex-shrink: 0;">
+                            <div class="spatial-card" style="padding: 10px 16px; display: flex; align-items: center; gap: 14px; min-width: 180px;">
                                 <div>
                                     <div style="font-weight: 800; font-size: 1.1rem; color: var(--primary);">Table ${c.table_number}</div>
                                     <div style="font-size: 0.72rem; color: var(--text-muted);">${getTimeAgo(c.created_at)}</div>
                                 </div>
-                                <button onclick="markWaiterServed(${c.id})" class="add-to-cart-btn" style="padding: 4px 12px; font-size: 0.75rem; background: var(--success); color: white;">
+                                <button onclick="markWaiterServed(${c.id})" class="add-to-cart-btn" style="padding: 4px 12px; font-size: 0.75rem; background: var(--success); color: black;">
                                     ✓ Served
                                 </button>
                             </div>
@@ -211,7 +211,7 @@
                                         <div style="font-weight: 800; font-size: 1.05rem; color: var(--text-primary);">Order #${o.id}</div>
                                         <div style="font-size: 0.76rem; color: var(--text-muted);">📍 Table ${o.table_number} • ${getTimeAgo(o.created_at)}</div>
                                     </div>
-                                    <span style="font-weight: 800; font-size: 0.72rem; text-transform: uppercase; padding: 2px 8px; border-radius: var(--radius-pill); background: rgba(198, 124, 78, 0.2); color: var(--primary); border: 1px solid var(--primary);">${o.status}</span>
+                                    <span style="font-weight: 800; font-size: 0.72rem; text-transform: uppercase; padding: 2px 8px; border-radius: var(--radius-pill); background: rgba(217, 155, 38, 0.2); color: var(--primary); border: 1px solid var(--primary);">${o.status}</span>
                                 </div>
 
                                 <div style="flex: 1; display: flex; flex-direction: column;">
@@ -227,7 +227,7 @@
                                         `).join('')}
                                     </div>
 
-                                    ${o.notes ? `<div style="background: rgba(198, 124, 78, 0.1); border: 1px solid var(--glass-border); padding: 8px; border-radius: var(--radius-sm); font-size: 0.78rem; color: #fde68a; margin-bottom: 12px;"><strong>📝 Notes:</strong> ${o.notes}</div>` : ''}
+                                    ${o.notes ? `<div style="background: rgba(217, 155, 38, 0.1); border: 1px solid var(--glass-border); padding: 8px; border-radius: var(--radius-sm); font-size: 0.78rem; color: #fde68a; margin-bottom: 12px;"><strong>📝 Notes:</strong> ${o.notes}</div>` : ''}
 
                                     ${currentTab === 'active' ? `
                                         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-top: auto;">
