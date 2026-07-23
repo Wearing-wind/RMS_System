@@ -49,23 +49,40 @@ function ensureDatabaseSchema($conn) {
         @$conn->query("INSERT IGNORE INTO admin_users (username, password, full_name) VALUES ('admin', '$default_pass', 'Administrator')");
     }
 
-    // 1. Orders table columns check
-    $cols = [];
-    $res = $conn->query("SHOW COLUMNS FROM orders");
-    if ($res) {
-        while ($r = $res->fetch_assoc()) {
-            $cols[] = $r['Field'];
+    // 1. Orders table check & creation
+    $orders_check = $conn->query("SHOW TABLES LIKE 'orders'");
+    if (!$orders_check || $orders_check->num_rows == 0) {
+        @$conn->query("CREATE TABLE IF NOT EXISTS orders (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            table_number VARCHAR(10) NOT NULL,
+            customer_name VARCHAR(100),
+            notes TEXT,
+            status ENUM('new', 'preparing', 'ready', 'completed', 'cancelled') DEFAULT 'new',
+            total_amount DECIMAL(10, 2) DEFAULT 0,
+            payment_status ENUM('pending', 'paid') DEFAULT 'pending',
+            payment_method VARCHAR(50) DEFAULT 'pending',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )");
+    } else {
+        // Orders table columns check
+        $cols = [];
+        $res = $conn->query("SHOW COLUMNS FROM orders");
+        if ($res) {
+            while ($r = $res->fetch_assoc()) {
+                $cols[] = $r['Field'];
+            }
         }
-    }
-    
-    if (!in_array('total_amount', $cols)) {
-        @$conn->query("ALTER TABLE orders ADD COLUMN total_amount DECIMAL(10,2) DEFAULT 0");
-    }
-    if (!in_array('payment_status', $cols)) {
-        @$conn->query("ALTER TABLE orders ADD COLUMN payment_status ENUM('pending', 'paid') DEFAULT 'pending'");
-    }
-    if (!in_array('payment_method', $cols)) {
-        @$conn->query("ALTER TABLE orders ADD COLUMN payment_method VARCHAR(50) DEFAULT 'pending'");
+        
+        if (!in_array('total_amount', $cols)) {
+            @$conn->query("ALTER TABLE orders ADD COLUMN total_amount DECIMAL(10,2) DEFAULT 0");
+        }
+        if (!in_array('payment_status', $cols)) {
+            @$conn->query("ALTER TABLE orders ADD COLUMN payment_status ENUM('pending', 'paid') DEFAULT 'pending'");
+        }
+        if (!in_array('payment_method', $cols)) {
+            @$conn->query("ALTER TABLE orders ADD COLUMN payment_method VARCHAR(50) DEFAULT 'pending'");
+        }
     }
 
     // 2. Payment Settings table check
@@ -94,26 +111,57 @@ function ensureDatabaseSchema($conn) {
         )");
     }
 
-    // 4. Menu Items table columns & status ENUM check
-    $menu_cols = [];
-    $res_m = $conn->query("SHOW COLUMNS FROM menu_items");
-    if ($res_m) {
-        while ($r = $res_m->fetch_assoc()) {
-            $menu_cols[] = $r['Field'];
+    // 4. Menu Items table check & creation
+    $menu_check = $conn->query("SHOW TABLES LIKE 'menu_items'");
+    if (!$menu_check || $menu_check->num_rows == 0) {
+        // Need to ensure categories exists first due to foreign key
+        $cat_check = $conn->query("SHOW TABLES LIKE 'categories'");
+        if (!$cat_check || $cat_check->num_rows == 0) {
+            @$conn->query("CREATE TABLE IF NOT EXISTS categories (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(100) NOT NULL UNIQUE,
+                description VARCHAR(255),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )");
+            @$conn->query("INSERT IGNORE INTO categories (name, description) VALUES ('Main Dishes', 'Delicious entrees'), ('Beverages', 'Refreshing drinks'), ('Desserts', 'Sweet treats')");
         }
-    }
-    if (!in_array('preparation_time', $menu_cols)) {
-        @$conn->query("ALTER TABLE menu_items ADD COLUMN preparation_time INT DEFAULT 15");
-    }
-    if (!in_array('is_popular', $menu_cols)) {
-        @$conn->query("ALTER TABLE menu_items ADD COLUMN is_popular TINYINT(1) DEFAULT 0");
-    }
-    if (!in_array('dietary_type', $menu_cols)) {
-        @$conn->query("ALTER TABLE menu_items ADD COLUMN dietary_type ENUM('veg', 'non-veg') DEFAULT 'veg'");
-    }
+        
+        @$conn->query("CREATE TABLE IF NOT EXISTS menu_items (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(200) NOT NULL,
+            description TEXT,
+            price DECIMAL(10, 2) NOT NULL,
+            image VARCHAR(255),
+            category_id INT NOT NULL,
+            status ENUM('active', 'inactive', 'sold_out') DEFAULT 'active',
+            is_popular TINYINT(1) DEFAULT 0,
+            preparation_time INT DEFAULT 15,
+            dietary_type ENUM('veg', 'non-veg') DEFAULT 'veg',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+        )");
+    } else {
+        // Menu Items table columns & status ENUM check
+        $menu_cols = [];
+        $res_m = $conn->query("SHOW COLUMNS FROM menu_items");
+        if ($res_m) {
+            while ($r = $res_m->fetch_assoc()) {
+                $menu_cols[] = $r['Field'];
+            }
+        }
+        if (!in_array('preparation_time', $menu_cols)) {
+            @$conn->query("ALTER TABLE menu_items ADD COLUMN preparation_time INT DEFAULT 15");
+        }
+        if (!in_array('is_popular', $menu_cols)) {
+            @$conn->query("ALTER TABLE menu_items ADD COLUMN is_popular TINYINT(1) DEFAULT 0");
+        }
+        if (!in_array('dietary_type', $menu_cols)) {
+            @$conn->query("ALTER TABLE menu_items ADD COLUMN dietary_type ENUM('veg', 'non-veg') DEFAULT 'veg'");
+        }
 
-    // Modify status ENUM to include 'sold_out'
-    @$conn->query("ALTER TABLE menu_items MODIFY COLUMN status ENUM('active', 'sold_out', 'inactive') DEFAULT 'active'");
+        // Modify status ENUM to include 'sold_out'
+        @$conn->query("ALTER TABLE menu_items MODIFY COLUMN status ENUM('active', 'sold_out', 'inactive') DEFAULT 'active'");
+    }
 
     // 5. Tables table check
     $tables_check = $conn->query("SHOW TABLES LIKE 'tables'");
@@ -137,6 +185,20 @@ function ensureDatabaseSchema($conn) {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )");
         @$conn->query("INSERT IGNORE INTO categories (name, description) VALUES ('Main Dishes', 'Delicious entrees'), ('Beverages', 'Refreshing drinks'), ('Desserts', 'Sweet treats')");
+    }
+
+    // 7. Order Items table check
+    $order_items_check = $conn->query("SHOW TABLES LIKE 'order_items'");
+    if (!$order_items_check || $order_items_check->num_rows == 0) {
+        @$conn->query("CREATE TABLE IF NOT EXISTS order_items (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            order_id INT NOT NULL,
+            menu_item_id INT NOT NULL,
+            quantity INT NOT NULL,
+            price DECIMAL(10, 2) NOT NULL,
+            FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+            FOREIGN KEY (menu_item_id) REFERENCES menu_items(id) ON DELETE CASCADE
+        )");
     }
 }
 
