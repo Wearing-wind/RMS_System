@@ -1,0 +1,800 @@
+/* ==========================================================================
+   FIGMA COFFEE SHOP MOBILE APP UI & MINIMAL SPATIAL CAFE DESIGN SYSTEM
+   QR Restaurant / Cafe Ordering System
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Sora:wght@400;600;700;800&display=swap');
+
+:root {
+    /* Figma Coffee Shop Theme Palette */
+    --bg-canvas: #090705;             /* Ultra Dark Roasted Bean Base */
+    --bg-canvas-alt: #120e0a;         /* Dark Espresso Layer */
+    --glass-card: rgba(26, 20, 15, 0.85); /* Frosted Glass Card */
+    --glass-card-hover: rgba(36, 28, 21, 0.95);
+    --glass-border: rgba(229, 169, 60, 0.16); /* Warm Honey Gold Accent Border */
+    --glass-border-bright: rgba(229, 169, 60, 0.35);
+    --glass-shadow: 0 16px 40px rgba(0, 0, 0, 0.65);
+
+    /* Accents inspired by Coffee App Design */
+    --primary: #c67c4e;                /* Rich Coffee Brown / Terracotta */
+    --primary-hover: #d98c5b;
+    --primary-glow: rgba(198, 124, 78, 0.4);
+    --secondary: #edd6c8;              /* Warm Latte Cream */
+    --accent-gold: #fbbf24;
+    --success: #22c55e;
+    --danger: #f43f5e;
+    --warning: #f59e0b;
+
+    /* Typography */
+    --font-sans: 'Sora', 'Plus Jakarta Sans', sans-serif;
+    --text-primary: #fdfaf6;
+    --text-secondary: #e2d7c7;
+    --text-muted: #9e9384;
+
+    /* Radius & Animations */
+    --radius-sm: 12px;
+    --radius-md: 18px;
+    --radius-lg: 24px;
+    --radius-pill: 9999px;
+    --transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    --transition-spring: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Reset & Viewport Lock */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+    width: 100%;
+    min-height: 100%;
+    background-color: var(--bg-canvas);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+}
+
+body {
+    padding-bottom: 96px; /* Safe distance for floating waiter FAB & bottom nav bar */
+}
+
+/* Ambient Background Aura */
+body::before, body::after {
+    content: '';
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.4;
+}
+
+body::before {
+    width: 320px;
+    height: 320px;
+    top: -80px;
+    left: -80px;
+    background: radial-gradient(circle, var(--primary) 0%, rgba(198, 124, 78, 0) 70%);
+}
+
+body::after {
+    width: 360px;
+    height: 360px;
+    bottom: -100px;
+    right: -100px;
+    background: radial-gradient(circle, var(--accent-gold) 0%, rgba(251, 191, 36, 0) 70%);
+}
+
+/* Mobile App Shell Wrapper */
+.mobile-app-shell {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    position: relative;
+    padding: 0 16px;
+}
+
+/* Spatial Glass Card */
+.spatial-card {
+    background: var(--glass-card);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--glass-shadow);
+    transition: var(--transition-spring);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Mobile Header Bar */
+.header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    padding: 14px 16px;
+    background: rgba(9, 7, 5, 0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.header .mobile-app-shell {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0;
+}
+
+.logo {
+    color: var(--text-primary);
+    font-size: 1.15rem;
+    font-weight: 800;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: -0.3px;
+}
+
+.table-badge {
+    background: rgba(198, 124, 78, 0.15);
+    border: 1px solid var(--glass-border);
+    color: var(--primary);
+    padding: 6px 14px;
+    border-radius: var(--radius-pill);
+    font-weight: 700;
+    font-size: 0.8rem;
+}
+
+/* Promo Card Banner (Figma Style) */
+.promo-card {
+    background: linear-gradient(135deg, #312016 0%, #1c140d 100%);
+    border: 1px solid var(--glass-border-bright);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    margin: 14px 0 18px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--glass-shadow);
+}
+
+.promo-tag {
+    background: #ed5151;
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+    display: inline-block;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.promo-title {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1.25;
+    margin-bottom: 4px;
+}
+
+.promo-desc {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+/* Category Navigation Pills */
+.category-nav {
+    margin: 12px 0 16px;
+}
+
+.category-nav-scroll {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+}
+
+.category-nav-scroll::-webkit-scrollbar { display: none; }
+
+.category-btn {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--glass-border);
+    color: var(--text-secondary);
+    padding: 8px 18px;
+    border-radius: var(--radius-pill);
+    font-weight: 700;
+    font-size: 0.82rem;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.category-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+    box-shadow: 0 4px 15px var(--primary-glow);
+    font-weight: 800;
+}
+
+/* Search Box */
+.search-box {
+    position: relative;
+    width: 100%;
+}
+
+.search-box input {
+    width: 100%;
+    background: rgba(24, 18, 13, 0.9);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 14px 18px 14px 46px;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-family: inherit;
+    outline: none;
+    transition: var(--transition);
+}
+
+.search-box input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 15px var(--primary-glow);
+}
+
+.search-icon {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1rem;
+    color: var(--text-muted);
+}
+
+/* Figma Style 2-Column Vertical Dish Cards Grid */
+.menu-grid-figma {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    margin-bottom: 30px;
+}
+
+.figma-card {
+    background: var(--glass-card);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    transition: var(--transition-spring);
+    position: relative;
+}
+
+.figma-card:active {
+    transform: scale(0.97);
+}
+
+.figma-card-image {
+    width: 100%;
+    height: 120px;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 248, 242, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.8rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.figma-card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.figma-card-rating {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: rgba(9, 7, 5, 0.7);
+    backdrop-filter: blur(8px);
+    color: var(--accent-gold);
+    font-size: 0.7rem;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: var(--radius-pill);
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.figma-card-content {
+    padding: 10px 4px 4px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.figma-card-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.figma-card-sub {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.figma-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+}
+
+.figma-card-price {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.figma-add-btn {
+    background: var(--primary);
+    color: white;
+    border: none;
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 800;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px var(--primary-glow);
+    transition: var(--transition-spring);
+}
+
+.figma-add-btn:active {
+    transform: scale(0.9);
+}
+
+/* FLOATING ACTION BUTTON (FAB) FOR CALL WAITER */
+.floating-waiter-fab {
+    position: fixed;
+    bottom: 84px;
+    right: max(16px, calc((100vw - 480px)/2 + 16px));
+    z-index: 9990;
+    background: linear-gradient(135deg, #e11d48, #be123c);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 12px 20px;
+    border-radius: var(--radius-pill);
+    font-weight: 800;
+    font-size: 0.88rem;
+    cursor: pointer;
+    box-shadow: 0 10px 25px rgba(225, 29, 72, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: var(--transition-spring);
+}
+
+.floating-waiter-fab:active {
+    transform: scale(0.95);
+}
+
+/* PINNED MOBILE BOTTOM NAVIGATION BAR */
+.mobile-nav-bar {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 480px;
+    height: 68px;
+    z-index: 9999;
+    background: rgba(18, 14, 10, 0.96);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border-top: 1px solid var(--glass-border-bright);
+    border-radius: 20px 20px 0 0;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0 8px;
+    box-shadow: 0 -12px 35px rgba(0, 0, 0, 0.75);
+}
+
+.mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.68rem;
+    font-weight: 700;
+    gap: 2px;
+    padding: 6px 10px;
+    border-radius: var(--radius-md);
+    transition: var(--transition);
+    position: relative;
+    cursor: pointer;
+    border: none;
+    background: none;
+    flex: 1;
+}
+
+.mobile-nav-item.active {
+    color: var(--primary);
+}
+
+.mobile-nav-icon {
+    font-size: 1.35rem;
+    transition: transform 0.2s ease;
+}
+
+.mobile-nav-item.active .mobile-nav-icon {
+    transform: scale(1.15) translateY(-2px);
+}
+
+.mobile-nav-badge {
+    position: absolute;
+    top: 4px;
+    right: 18px;
+    background: #e11d48;
+    color: white;
+    font-size: 0.68rem;
+    font-weight: 800;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Modals & Bottom Sheets */
+.custom-modal, .spatial-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: var(--transition);
+}
+
+.custom-modal.active, .spatial-modal.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.custom-modal-overlay, .spatial-modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(9, 7, 5, 0.85);
+    backdrop-filter: blur(14px);
+}
+
+.custom-modal-content, .spatial-modal-content {
+    position: relative;
+    z-index: 2;
+    background: rgba(22, 16, 12, 0.97);
+    backdrop-filter: blur(30px);
+    border: 1px solid var(--glass-border-bright);
+    border-radius: 28px 28px 0 0;
+    padding: 24px 20px 32px;
+    width: 100%;
+    max-width: 480px;
+    box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.8);
+    transform: translateY(100%);
+    transition: var(--transition-spring);
+}
+
+.custom-modal.active .custom-modal-content,
+.spatial-modal.active .spatial-modal-content {
+    transform: translateY(0);
+}
+
+.custom-modal-close, .spatial-modal-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: var(--text-muted);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.checkout-btn {
+    width: 100%;
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 14px;
+    border-radius: var(--radius-pill);
+    font-weight: 800;
+    font-size: 0.98rem;
+    cursor: pointer;
+    box-shadow: 0 6px 20px var(--primary-glow);
+    transition: var(--transition-spring);
+    text-align: center;
+    text-decoration: none;
+    display: block;
+}
+
+.checkout-btn:active {
+    transform: scale(0.97);
+}
+
+/* Payment Choice Cards */
+.payment-choice-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin: 14px 0;
+}
+
+.payment-choice-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: 14px 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.payment-choice-card.active {
+    background: rgba(198, 124, 78, 0.2);
+    border-color: var(--primary);
+    box-shadow: 0 0 18px var(--primary-glow);
+}
+
+.payment-choice-icon {
+    font-size: 1.8rem;
+    margin-bottom: 4px;
+}
+
+.payment-choice-title {
+    font-weight: 800;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+}
+
+/* Animated Tick Success Modal */
+.order-tick-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 20000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(9, 7, 5, 0.88);
+    backdrop-filter: blur(24px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+    padding: 16px;
+}
+
+.order-tick-modal.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.order-tick-card {
+    background: rgba(22, 16, 12, 0.96);
+    border: 1px solid var(--glass-border-bright);
+    border-radius: 28px;
+    padding: 28px 20px;
+    text-align: center;
+    max-width: 380px;
+    width: 100%;
+    transform: scale(0.8);
+    transition: var(--transition-spring);
+}
+
+.order-tick-modal.active .order-tick-card {
+    transform: scale(1);
+}
+
+.tick-wrapper {
+    width: 76px;
+    height: 76px;
+    margin: 0 auto 16px;
+}
+
+.checkmark-svg {
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    stroke-width: 3;
+    stroke: #22c55e;
+}
+
+.checkmark-circle {
+    stroke-dasharray: 166;
+    stroke-dashoffset: 166;
+    stroke: #22c55e;
+    fill: none;
+    animation: strokeTick 0.6s forwards;
+}
+
+.checkmark-check {
+    stroke-dasharray: 48;
+    stroke-dashoffset: 48;
+    animation: strokeCheck 0.35s 0.6s forwards;
+}
+
+@keyframes strokeTick { 100% { stroke-dashoffset: 0; } }
+@keyframes strokeCheck { 100% { stroke-dashoffset: 0; } }
+
+/* Toast Notifications */
+.spatial-toast {
+    position: fixed;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 30000;
+    background: rgba(22, 16, 12, 0.96);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border-bright);
+    color: var(--text-primary);
+    padding: 10px 18px;
+    border-radius: var(--radius-pill);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 0.82rem;
+    white-space: nowrap;
+}
+
+/* ==========================================================================
+   PROFESSIONAL ADMIN DASHBOARD DESIGN SYSTEM
+   ========================================================================== */
+.admin-shell {
+    display: flex;
+    min-height: 100vh;
+    background: var(--bg-canvas-alt);
+}
+
+.admin-sidebar {
+    width: 260px;
+    background: rgba(18, 14, 10, 0.95);
+    border-right: 1px solid var(--glass-border);
+    padding: 24px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.admin-sidebar-logo {
+    font-family: var(--font-serif);
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--primary);
+    padding: 0 12px 20px;
+    border-bottom: 1px solid var(--glass-border);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.admin-nav-item {
+    color: var(--text-muted);
+    text-decoration: none;
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: var(--transition);
+}
+
+.admin-nav-item:hover, .admin-nav-item.active {
+    background: rgba(198, 124, 78, 0.15);
+    color: var(--primary);
+    border-left: 3px solid var(--primary);
+}
+
+.admin-main {
+    flex: 1;
+    padding: 28px 36px;
+    overflow-y: auto;
+}
+
+.admin-top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 28px;
+}
+
+.admin-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.admin-stat-card {
+    background: var(--glass-card);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.admin-stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-sm);
+    background: rgba(198, 124, 78, 0.15);
+    color: var(--primary);
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 16px;
+}
+
+.admin-table th, .admin-table td {
+    padding: 14px 16px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    font-size: 0.9rem;
+}
+
+.admin-table th {
+    color: var(--text-secondary);
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.78rem;
+    letter-spacing: 0.5px;
+}
+
+@media (max-width: 768px) {
+    .admin-shell { flex-direction: column; }
+    .admin-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--glass-border); }
+    .admin-main { padding: 16px; }
+}

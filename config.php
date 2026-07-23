@@ -5,28 +5,93 @@ define('DB_USER', 'root');
 define('DB_PASS', '');
 define('DB_NAME', 'qr_restaurant');
 
-// Create database connection with error handling
+// Create database connection with error handling & auto schema migration
 function getDBConnection() {
-    // First try to connect without database to check if it exists
     $conn = @new mysqli(DB_HOST, DB_USER, DB_PASS);
     
     if ($conn->connect_error) {
         return null;
     }
     
-    // Check if database exists
+    // Check if database exists, create if not
     $result = $conn->query("SHOW DATABASES LIKE '" . DB_NAME . "'");
     if ($result->num_rows == 0) {
-        return null;
+        $conn->query("CREATE DATABASE IF NOT EXISTS " . DB_NAME);
     }
     
-    // Select the database
     if (!$conn->select_db(DB_NAME)) {
         return null;
     }
     
     $conn->set_charset("utf8mb4");
+    
+    // Ensure all required tables and columns exist seamlessly
+    ensureDatabaseSchema($conn);
+    
     return $conn;
+}
+
+// Auto Schema Migration Helper
+function ensureDatabaseSchema($conn) {
+    // 1. Orders table columns check
+    $cols = [];
+    $res = $conn->query("SHOW COLUMNS FROM orders");
+    if ($res) {
+        while ($r = $res->fetch_assoc()) {
+            $cols[] = $r['Field'];
+        }
+    }
+    
+    if (!in_array('total_amount', $cols)) {
+        @$conn->query("ALTER TABLE orders ADD COLUMN total_amount DECIMAL(10,2) DEFAULT 0");
+    }
+    if (!in_array('payment_status', $cols)) {
+        @$conn->query("ALTER TABLE orders ADD COLUMN payment_status ENUM('pending', 'paid') DEFAULT 'pending'");
+    }
+    if (!in_array('payment_method', $cols)) {
+        @$conn->query("ALTER TABLE orders ADD COLUMN payment_method VARCHAR(50) DEFAULT 'pending'");
+    }
+
+    // 2. Payment Settings table check
+    $table_check = $conn->query("SHOW TABLES LIKE 'payment_settings'");
+    if ($table_check->num_rows == 0) {
+        @$conn->query("CREATE TABLE IF NOT EXISTS payment_settings (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            restaurant_name VARCHAR(200) DEFAULT 'QR Restaurant',
+            payment_note VARCHAR(500),
+            qr_code_image VARCHAR(255),
+            is_active TINYINT(1) DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )");
+        @$conn->query("INSERT INTO payment_settings (restaurant_name, payment_note) VALUES ('QR Restaurant', 'Scan QR to pay via Esewa/Khalti')");
+    }
+
+    // 3. Waiter Calls table check
+    $waiter_check = $conn->query("SHOW TABLES LIKE 'waiter_calls'");
+    if ($waiter_check->num_rows == 0) {
+        @$conn->query("CREATE TABLE IF NOT EXISTS waiter_calls (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            table_number VARCHAR(10) NOT NULL,
+            status ENUM('pending', 'served') DEFAULT 'pending',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )");
+    }
+
+    // 4. Menu Items table columns check
+    $menu_cols = [];
+    $res_m = $conn->query("SHOW COLUMNS FROM menu_items");
+    if ($res_m) {
+        while ($r = $res_m->fetch_assoc()) {
+            $menu_cols[] = $r['Field'];
+        }
+    }
+    if (!in_array('preparation_time', $menu_cols)) {
+        @$conn->query("ALTER TABLE menu_items ADD COLUMN preparation_time INT DEFAULT 15");
+    }
+    if (!in_array('is_popular', $menu_cols)) {
+        @$conn->query("ALTER TABLE menu_items ADD COLUMN is_popular TINYINT(1) DEFAULT 0");
+    }
 }
 
 // Check if database is setup
@@ -40,7 +105,9 @@ function isDatabaseSetup() {
 }
 
 // Session start
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Helper function to sanitize input
 function sanitize($data) {
@@ -53,17 +120,13 @@ function sanitize($data) {
 // Format price - Nepali Rupees (Rs.) with thousand separators
 function formatPrice($price) {
     $price = floatval($price);
-    
-    // If whole number, don't show decimals
     if ($price == floor($price)) {
         return 'Rs. ' . number_format($price, 0);
     }
-    
-    // Otherwise show 2 decimal places
     return 'Rs. ' . number_format($price, 2);
 }
 
-// Short format price - for small displays
+// Short format price
 function formatPriceShort($price) {
     return 'Rs. ' . number_format(floatval($price), 0);
 }

@@ -1,207 +1,95 @@
-// QR Restaurant - Modern JavaScript
-// Advanced Features
+/* ==========================================================================
+   QR RESTAURANT - MODERN SPATIAL INTERACTIVE JAVASCRIPT
+   ========================================================================== */
 
-// ==================== CUSTOMIZATION MODAL ====================
-let currentCustomItem = {
-    id: null,
-    name: '',
-    price: 0,
-    description: '',
-    preparationTime: 15,
-    quantity: 1
-};
-
-function openCustomModal(itemId, itemName, itemPrice, description, prepTime) {
-    currentCustomItem = {
-        id: itemId,
-        name: itemName,
-        price: parseFloat(itemPrice),
-        description: description || '',
-        preparationTime: prepTime || 15,
-        quantity: 1
-    };
-    
-    // Update modal content
-    document.getElementById('customModalTitle').textContent = itemName;
-    document.getElementById('customModalDesc').textContent = description || '';
-    document.getElementById('customModalPrice').textContent = formatPrice(itemPrice);
-    document.getElementById('customModalQty').textContent = '1';
-    document.getElementById('customModalTotal').textContent = formatPrice(itemPrice);
-    
-    // Reset customization options
-    document.querySelector('input[name="spice_level"][value="mild"]').checked = true;
-    document.getElementById('extraCheese').checked = false;
-    document.getElementById('extraFries').checked = false;
-    document.getElementById('extraSauce').checked = false;
-    
-    // Show modal
-    document.getElementById('customModal').classList.add('active');
-    document.body.style.overflow = 'hidden';
-}
-
-function closeCustomModal() {
-    document.getElementById('customModal').classList.remove('active');
-    document.body.style.overflow = '';
-}
-
-function customModalChangeQty(change) {
-    currentCustomItem.quantity += change;
-    if (currentCustomItem.quantity < 1) currentCustomItem.quantity = 1;
-    if (currentCustomItem.quantity > 10) currentCustomItem.quantity = 10;
-    
-    document.getElementById('customModalQty').textContent = currentCustomItem.quantity;
-    updateCustomModalTotal();
-}
-
-function updateCustomModalTotal() {
-    let total = currentCustomItem.price * currentCustomItem.quantity;
-    
-    // Add extra prices
-    if (document.getElementById('extraCheese').checked) {
-        total += parseInt(document.getElementById('extraCheese').dataset.price) * currentCustomItem.quantity;
-    }
-    if (document.getElementById('extraFries').checked) {
-        total += parseInt(document.getElementById('extraFries').dataset.price) * currentCustomItem.quantity;
-    }
-    if (document.getElementById('extraSauce').checked) {
-        total += parseInt(document.getElementById('extraSauce').dataset.price) * currentCustomItem.quantity;
-    }
-    
-    document.getElementById('customModalTotal').textContent = formatPrice(total);
-}
-
-function addCustomToCart() {
-    // Get customization options
-    const spiceLevel = document.querySelector('input[name="spice_level"]:checked').value;
-    const extras = [];
-    
-    if (document.getElementById('extraCheese').checked) {
-        extras.push({ name: 'Extra Cheese', price: 50 });
-    }
-    if (document.getElementById('extraFries').checked) {
-        extras.push({ name: 'Extra Fries', price: 80 });
-    }
-    if (document.getElementById('extraSauce').checked) {
-        extras.push({ name: 'Extra Sauce', price: 20 });
-    }
-    
-    // Calculate total price with extras
-    let itemPrice = currentCustomItem.price;
-    extras.forEach(extra => {
-        itemPrice += extra.price;
-    });
-    
-    const customizations = {
-        spice_level: spiceLevel,
-        extras: extras
-    };
-    
-    addToCart(currentCustomItem.id, currentCustomItem.name, itemPrice, customizations);
-    closeCustomModal();
-}
-
-// Update total when extras change
-document.addEventListener('change', function(e) {
-    if (e.target.id === 'extraCheese' || e.target.id === 'extraFries' || e.target.id === 'extraSauce') {
-        updateCustomModalTotal();
-    }
-});
-
-// ==================== CART MANAGEMENT ====================
+// Global Cart State
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
 
+// Save Cart to LocalStorage and update all UI elements
 function saveCart() {
     localStorage.setItem('cart', JSON.stringify(cart));
     updateCartCount();
     updateCartPanel();
+    if (typeof renderCartPage === 'function') {
+        renderCartPage();
+    }
 }
 
+// Format Price (Nepali Rupees)
+function formatPrice(price) {
+    const num = parseFloat(price) || 0;
+    if (num === Math.floor(num)) {
+        return 'Rs. ' + num.toLocaleString('en-IN');
+    }
+    return 'Rs. ' + num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// Update Cart Count Badges & Sticky Mobile Button
 function updateCartCount() {
-    const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+    const totalCount = cart.reduce((sum, item) => sum + item.quantity, 0);
     const badges = document.querySelectorAll('.cart-badge');
     badges.forEach(badge => {
-        badge.textContent = cartCount;
-        badge.style.display = cartCount > 0 ? 'flex' : 'none';
+        badge.textContent = totalCount;
+        badge.style.display = totalCount > 0 ? 'flex' : 'none';
     });
-    
-    // Update sticky cart button
-    updateStickyCart();
+
+    const stickyBtn = document.getElementById('stickyCartBtn');
+    if (stickyBtn) {
+        const stickyCount = document.getElementById('stickyCartCount');
+        const stickyTotal = document.getElementById('stickyCartTotal');
+        if (stickyCount) stickyCount.textContent = totalCount;
+        if (stickyTotal) stickyTotal.textContent = formatPrice(getCartTotal());
+        stickyBtn.style.display = totalCount > 0 ? 'flex' : 'none';
+    }
 }
 
-function updateStickyCart() {
-    const stickyCartBtn = document.getElementById('stickyCartBtn');
-    if (!stickyCartBtn) return;
-    
-    const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-    const cartTotal = getCartTotal();
-    
-    const stickyCartCount = document.getElementById('stickyCartCount');
-    const stickyCartTotal = document.getElementById('stickyCartTotal');
-    
-    if (stickyCartCount) stickyCartCount.textContent = cartCount;
-    if (stickyCartTotal) stickyCartTotal.textContent = formatPrice(cartTotal);
-    
-    // Show/hide sticky cart based on cart contents
-    stickyCartBtn.style.display = cartCount > 0 ? 'flex' : 'none';
+// Calculate Cart Total Amount
+function getCartTotal() {
+    return cart.reduce((sum, item) => sum + (parseFloat(item.price) * item.quantity), 0);
 }
 
+// Add Item to Cart
 function addToCart(itemId, itemName, itemPrice, customizations = {}) {
-    const existingItem = cart.find(item => item.id === itemId && JSON.stringify(item.customizations) === JSON.stringify(customizations));
-    
-    if (existingItem) {
-        existingItem.quantity++;
+    const existingIndex = cart.findIndex(item => item.id === itemId && JSON.stringify(item.customizations || {}) === JSON.stringify(customizations));
+
+    if (existingIndex > -1) {
+        cart[existingIndex].quantity++;
     } else {
         cart.push({
             id: itemId,
             name: itemName,
-            price: itemPrice,
+            price: parseFloat(itemPrice),
             quantity: 1,
             customizations: customizations
         });
     }
-    
+
     saveCart();
-    showToast(itemName + ' added to cart!', 'success');
-    
-    // Open cart panel
+    showToast(`Added ${itemName} to cart!`, 'success');
     openCartPanel();
 }
 
+// Update Item Quantity in Cart
 function updateQuantity(itemId, change, customizations = {}) {
-    const item = cart.find(i => i.id === itemId && JSON.stringify(i.customizations) === JSON.stringify(customizations));
-    
-    if (item) {
-        item.quantity += change;
-        
-        if (item.quantity <= 0) {
-            removeFromCart(itemId, customizations);
-        } else {
-            saveCart();
+    const index = cart.findIndex(item => item.id === itemId && JSON.stringify(item.customizations || {}) === JSON.stringify(customizations));
+
+    if (index > -1) {
+        cart[index].quantity += change;
+        if (cart[index].quantity <= 0) {
+            cart.splice(index, 1);
         }
+        saveCart();
     }
 }
 
+// Remove Item from Cart
 function removeFromCart(itemId, customizations = {}) {
-    cart = cart.filter(item => !(item.id === itemId && JSON.stringify(item.customizations) === JSON.stringify(customizations)));
+    cart = cart.filter(item => !(item.id === itemId && JSON.stringify(item.customizations || {}) === JSON.stringify(customizations)));
     saveCart();
+    showToast('Item removed from cart', 'info');
 }
 
-function getCartTotal() {
-    return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-}
-
-// Format price - Nepali Rupees with thousand separators
-function formatPrice(price) {
-    const num = parseFloat(price);
-    // If whole number, don't show decimals
-    if (num === Math.floor(num)) {
-        return 'Rs. ' + num.toLocaleString('en-IN');
-    }
-    // Otherwise show 2 decimal places
-    return 'Rs. ' + num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-// ==================== SLIDE-OUT CART PANEL ====================
+// ==================== SLIDE-OUT SPATIAL CART PANEL ====================
 function openCartPanel() {
     const overlay = document.querySelector('.cart-overlay');
     const panel = document.querySelector('.cart-panel');
@@ -218,340 +106,326 @@ function closeCartPanel() {
 }
 
 function updateCartPanel() {
-    const cartItemsContainer = document.querySelector('.cart-items');
-    const cartTotalElement = document.getElementById('cartTotal');
+    const container = document.querySelector('.cart-items');
+    const totalEl = document.getElementById('cartTotal');
     const checkoutBtn = document.getElementById('checkoutBtn');
-    const emptyCart = document.querySelector('.empty-cart');
-    
-    if (!cartItemsContainer) return;
-    
+
+    if (!container) return;
+
     if (cart.length === 0) {
-        cartItemsContainer.innerHTML = `
-            <div class="empty-cart">
-                <div class="empty-cart-icon">🛒</div>
-                <p>Your cart is empty</p>
+        container.innerHTML = `
+            <div style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+                <div style="font-size: 3.5rem; margin-bottom: 12px;">🛒</div>
+                <p style="font-size: 1rem; font-weight: 600;">Your cart is empty</p>
             </div>
         `;
-        if (cartTotalElement) cartTotalElement.textContent = 'Rs. 0.00';
+        if (totalEl) totalEl.textContent = 'Rs. 0.00';
         if (checkoutBtn) checkoutBtn.disabled = true;
-        if (emptyCart) emptyCart.style.display = 'block';
         return;
     }
-    
-    if (emptyCart) emptyCart.style.display = 'none';
+
     if (checkoutBtn) checkoutBtn.disabled = false;
-    
-    cartItemsContainer.innerHTML = cart.map((item, index) => `
-        <div class="cart-item">
-            <div class="cart-item-image">🍽️</div>
-            <div class="cart-item-details">
-                <div class="cart-item-name">${item.name}</div>
-                <div class="cart-item-price">${formatPrice(item.price * item.quantity)}</div>
-            </div>
-            <div class="cart-item-actions">
-                <div class="quantity-control">
-                    <button class="quantity-btn" onclick="updateQuantity(${item.id}, -1, ${JSON.stringify(item.customizations || {})})">−</button>
-                    <span class="quantity-value">${item.quantity}</span>
-                    <button class="quantity-btn" onclick="updateQuantity(${item.id}, 1, ${JSON.stringify(item.customizations || {})})">+</button>
+
+    container.innerHTML = cart.map(item => {
+        let customText = '';
+        if (item.customizations) {
+            if (item.customizations.spice_level) customText += `🌶️ ${item.customizations.spice_level}`;
+            if (item.customizations.extras && item.customizations.extras.length > 0) {
+                const extraNames = item.customizations.extras.map(e => e.name).join(', ');
+                customText += ` | + ${extraNames}`;
+            }
+        }
+        return `
+            <div class="cart-item">
+                <div class="cart-item-image">🍽️</div>
+                <div class="cart-item-details">
+                    <div class="cart-item-name">${item.name}</div>
+                    ${customText ? `<div class="cart-item-customizations">${customText}</div>` : ''}
+                    <div class="cart-item-price">${formatPrice(item.price * item.quantity)}</div>
                 </div>
-                <button class="remove-btn" onclick="removeFromCart(${item.id}, ${JSON.stringify(item.customizations || {})})">✕</button>
+                <div class="cart-item-actions">
+                    <div class="quantity-control">
+                        <button class="quantity-btn" onclick="updateQuantity(${item.id}, -1, ${JSON.stringify(item.customizations || {}).replace(/"/g, '&quot;')})">−</button>
+                        <span class="quantity-value">${item.quantity}</span>
+                        <button class="quantity-btn" onclick="updateQuantity(${item.id}, 1, ${JSON.stringify(item.customizations || {}).replace(/"/g, '&quot;')})">+</button>
+                    </div>
+                    <button class="remove-btn" onclick="removeFromCart(${item.id}, ${JSON.stringify(item.customizations || {}).replace(/"/g, '&quot;')})">Remove</button>
+                </div>
             </div>
-        </div>
-    `).join('');
-    
-    if (cartTotalElement) cartTotalElement.textContent = formatPrice(getCartTotal());
+        `;
+    }).join('');
+
+    if (totalEl) totalEl.textContent = formatPrice(getCartTotal());
 }
 
-// ==================== SEARCH ====================
-function searchMenu(query) {
-    const menuItems = document.querySelectorAll('.menu-item');
-    const lowerQuery = query.toLowerCase();
-    
-    menuItems.forEach(item => {
-        const name = item.querySelector('.menu-item-name')?.textContent.toLowerCase() || '';
-        const description = item.querySelector('.menu-item-description')?.textContent.toLowerCase() || '';
-        
-        if (name.includes(lowerQuery) || description.includes(lowerQuery)) {
-            item.style.display = '';
-        } else {
-            item.style.display = 'none';
+// ==================== ITEM CUSTOMIZATION MODAL ====================
+let currentCustomItem = null;
+
+function openCustomModal(itemId, itemName, itemPrice, description, prepTime) {
+    currentCustomItem = {
+        id: itemId,
+        name: itemName,
+        price: parseFloat(itemPrice),
+        description: description || '',
+        preparationTime: prepTime || 15,
+        quantity: 1
+    };
+
+    const titleEl = document.getElementById('customModalTitle');
+    const descEl = document.getElementById('customModalDesc');
+    const priceEl = document.getElementById('customModalPrice');
+    const qtyEl = document.getElementById('customModalQty');
+    const totalEl = document.getElementById('customModalTotal');
+
+    if (titleEl) titleEl.textContent = itemName;
+    if (descEl) descEl.textContent = description || '';
+    if (priceEl) priceEl.textContent = formatPrice(itemPrice);
+    if (qtyEl) qtyEl.textContent = '1';
+
+    // Reset options
+    const mildRadio = document.querySelector('input[name="spice_level"][value="mild"]');
+    if (mildRadio) mildRadio.checked = true;
+
+    ['extraCheese', 'extraFries', 'extraSauce'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.checked = false;
+    });
+
+    updateCustomModalTotal();
+
+    const modal = document.getElementById('customModal');
+    if (modal) modal.classList.add('active');
+}
+
+function closeCustomModal() {
+    const modal = document.getElementById('customModal');
+    if (modal) modal.classList.remove('active');
+}
+
+function customModalChangeQty(change) {
+    if (!currentCustomItem) return;
+    currentCustomItem.quantity += change;
+    if (currentCustomItem.quantity < 1) currentCustomItem.quantity = 1;
+    if (currentCustomItem.quantity > 10) currentCustomItem.quantity = 10;
+
+    const qtyEl = document.getElementById('customModalQty');
+    if (qtyEl) qtyEl.textContent = currentCustomItem.quantity;
+    updateCustomModalTotal();
+}
+
+function updateCustomModalTotal() {
+    if (!currentCustomItem) return;
+    let total = currentCustomItem.price;
+
+    ['extraCheese', 'extraFries', 'extraSauce'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && el.checked) {
+            total += parseFloat(el.dataset.price || 0);
         }
     });
+
+    total *= currentCustomItem.quantity;
+    const totalEl = document.getElementById('customModalTotal');
+    if (totalEl) totalEl.textContent = formatPrice(total);
 }
 
-// ==================== CATEGORY FILTER ====================
-function filterByCategory(categoryId) {
-    const buttons = document.querySelectorAll('.category-btn');
-    buttons.forEach(btn => btn.classList.remove('active'));
-    
-    const activeBtn = document.querySelector(`[data-category="${categoryId || 'all'}"]`);
-    if (activeBtn) activeBtn.classList.add('active');
-    
-    // Reload page with category filter
-    const url = new URL(window.location.href);
-    if (categoryId > 0) {
-        url.searchParams.set('category', categoryId);
-    } else {
-        url.searchParams.delete('category');
+function addCustomToCart() {
+    if (!currentCustomItem) return;
+
+    const spiceEl = document.querySelector('input[name="spice_level"]:checked');
+    const spiceLevel = spiceEl ? spiceEl.value : 'mild';
+    const extras = [];
+
+    const extraMap = [
+        { id: 'extraCheese', name: 'Extra Cheese', price: 50 },
+        { id: 'extraFries', name: 'Extra Fries', price: 80 },
+        { id: 'extraSauce', name: 'Extra Sauce', price: 20 }
+    ];
+
+    extraMap.forEach(e => {
+        const el = document.getElementById(e.id);
+        if (el && el.checked) {
+            extras.push({ name: e.name, price: e.price });
+        }
+    });
+
+    let unitPrice = currentCustomItem.price;
+    extras.forEach(e => { unitPrice += e.price; });
+
+    const customizations = {
+        spice_level: spiceLevel,
+        extras: extras
+    };
+
+    for (let i = 0; i < currentCustomItem.quantity; i++) {
+        addToCart(currentCustomItem.id, currentCustomItem.name, unitPrice, customizations);
     }
-    window.location.href = url.toString();
+
+    closeCustomModal();
 }
 
-// ==================== CALL WAITER ====================
+// ==================== ANIMATED ORDER PLACED TICK MODAL ====================
+function showOrderPlacedTickModal(orderData, redirectUrl) {
+    // Play payment success chime
+    playSuccessChime();
+
+    // Create tick modal element
+    const modal = document.createElement('div');
+    modal.className = 'order-tick-modal active';
+    modal.id = 'orderPlacedTickModal';
+
+    const itemsSummary = (orderData.items || []).map(i => `
+        <div class="order-tick-row">
+            <span>${i.quantity}x ${i.name}</span>
+            <span>${formatPrice(i.price * i.quantity)}</span>
+        </div>
+    `).join('');
+
+    modal.innerHTML = `
+        <div class="order-tick-card">
+            <div class="tick-wrapper">
+                <svg class="checkmark-svg" viewBox="0 0 52 52">
+                    <circle class="checkmark-circle" cx="26" cy="26" r="25" fill="none"/>
+                    <path class="checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+                </svg>
+            </div>
+            <h2 class="order-tick-title">Order Placed Successfully!</h2>
+            <p class="order-tick-subtitle">Order #${orderData.id} • Table ${orderData.table_number}</p>
+            
+            <div class="order-tick-details">
+                ${itemsSummary}
+                <div class="order-tick-row total">
+                    <span>Total Amount Paid</span>
+                    <span>${formatPrice(orderData.total)}</span>
+                </div>
+            </div>
+            
+            <button class="order-tick-btn" id="viewTrackerBtn">Track Order Progress →</button>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Clear cart in localStorage
+    localStorage.removeItem('cart');
+    cart = [];
+    updateCartCount();
+
+    const redirectAction = () => {
+        window.location.href = redirectUrl;
+    };
+
+    document.getElementById('viewTrackerBtn').addEventListener('click', redirectAction);
+
+    // Auto-redirect after 3.5 seconds
+    setTimeout(redirectAction, 3500);
+}
+
+// Web Audio API Success Chime
+function playSuccessChime() {
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const now = audioCtx.currentTime;
+
+        const playNote = (freq, startTime, duration) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, startTime);
+
+            gain.gain.setValueAtTime(0.01, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.3, startTime + 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start(startTime);
+            osc.stop(startTime + duration);
+        };
+
+        // Apple Pay style double chime (E5 -> A5)
+        playNote(659.25, now, 0.25);
+        playNote(880.00, now + 0.15, 0.5);
+    } catch (e) {
+        console.log('Audio chime not supported');
+    }
+}
+
+// Call Waiter API
 function callWaiter() {
     const tableNumber = new URLSearchParams(window.location.search).get('table') || '1';
-    
+
     fetch('api/call-waiter.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: 'table_number=' + encodeURIComponent(tableNumber)
     })
-    .then(response => response.json())
+    .then(r => r.json())
     .then(data => {
         if (data.success) {
-            showToast('🔔 Waiter has been notified!', 'success');
+            showToast('🔔 Waiter has been notified to your table!', 'success');
         } else {
-            showToast('Error calling waiter', 'error');
+            showToast(data.message || 'Error calling waiter', 'warning');
         }
     })
-    .catch(error => {
-        console.error('Error:', error);
-        showToast('Error calling waiter', 'error');
-    });
+    .catch(() => showToast('Error notifying waiter', 'error'));
 }
 
-// ==================== ORDER TIMER ====================
-function startOrderTimer(orderId, startTime) {
-    const timerElement = document.getElementById(`timer-${orderId}`);
-    if (!timerElement) return;
-    
-    setInterval(() => {
-        const now = new Date();
-        const start = new Date(startTime);
-        const diff = Math.floor((now - start) / 1000);
-        
-        const minutes = Math.floor(diff / 60);
-        const seconds = diff % 60;
-        
-        timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-    }, 1000);
+// Toast Notifications
+function showToast(message, type = 'success') {
+    const existingToasts = document.querySelectorAll('.spatial-toast');
+    existingToasts.forEach(t => t.remove());
+
+    const toast = document.createElement('div');
+    toast.className = `spatial-toast ${type}`;
+    const icon = type === 'success' ? '✓' : type === 'warning' ? '⚠️' : 'ℹ️';
+    toast.innerHTML = `<span>${icon}</span><span>${message}</span>`;
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
 }
 
-// ==================== KITCHEN DASHBOARD ====================
-let lastOrderCount = 0;
-
-function loadKitchenOrders() {
-    fetch('api/orders.php?status=all')
-        .then(response => response.json())
-        .then(data => {
-            renderKitchenOrders(data.orders);
-            
-            // Play sound for new orders
-            if (lastOrderCount > 0 && data.orders.length > lastOrderCount) {
-                const newOrders = data.orders.filter(o => o.status === 'new');
-                if (newOrders.length > 0) {
-                    playNotificationSound();
-                }
-            }
-            lastOrderCount = data.orders.length;
-        })
-        .catch(error => console.error('Error:', error));
+// Safe Cross-Platform Date Helper (Fixes Safari/macOS NaN bug)
+function parseMySQLDate(dateStr) {
+    if (!dateStr) return new Date();
+    // Replace space with 'T' for standard ISO 8601 parsing
+    const isoStr = dateStr.replace(' ', 'T');
+    const parsed = new Date(isoStr);
+    return isNaN(parsed.getTime()) ? new Date(dateStr) : parsed;
 }
 
-function renderKitchenOrders(orders) {
-    const ordersGrid = document.getElementById('ordersGrid');
-    if (!ordersGrid) return;
-    
-    if (orders.length === 0) {
-        ordersGrid.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><p>No orders yet</p></div>';
-        return;
-    }
-    
-    ordersGrid.innerHTML = orders.map(order => {
-        const isNew = order.status === 'new';
-        const timeAgo = getTimeAgo(order.created_at);
-        
-        return `
-            <div class="order-card ${isNew ? 'new-order' : ''}">
-                <div class="order-card-header ${order.status}">
-                    <span class="order-id">#${order.id}</span>
-                    <span class="order-table">Table ${order.table_number}</span>
-                </div>
-                <div class="order-card-body">
-                    <div class="order-items-list">
-                        ${order.items.map(item => `
-                            <div class="order-item-row">
-                                <span><span class="order-item-qty">${item.quantity}x</span> ${item.name}</span>
-                                <span>${formatPrice(item.price * item.quantity)}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                    ${order.notes ? `<div class="order-notes"><strong>📝 Note:</strong> ${order.notes}</div>` : ''}
-                    <div class="order-time">
-                        <span>🕐 Ordered: ${timeAgo}</span>
-                        <span class="order-timer" id="timer-${order.id}">0:00</span>
-                    </div>
-                    <div class="order-actions">
-                        <button class="status-btn new ${order.status === 'new' ? 'active' : ''}" 
-                                onclick="updateOrderStatus(${order.id}, 'new')" 
-                                ${order.status === 'new' ? 'disabled' : ''}>New</button>
-                        <button class="status-btn preparing ${order.status === 'preparing' ? 'active' : ''}" 
-                                onclick="updateOrderStatus(${order.id}, 'preparing')" 
-                                ${order.status === 'preparing' ? 'disabled' : ''}>Preparing</button>
-                        <button class="status-btn ready ${order.status === 'ready' ? 'active' : ''}" 
-                                onclick="updateOrderStatus(${order.id}, 'ready')" 
-                                ${order.status === 'ready' ? 'disabled' : ''}>Ready</button>
-                        <button class="status-btn completed ${order.status === 'completed' ? 'active' : ''}" 
-                                onclick="updateOrderStatus(${order.id}, 'completed')" 
-                                ${order.status === 'completed' ? 'disabled' : ''}>Done</button>
-                    </div>
-                </div>
-            </div>
-        `;
-    }).join('');
-    
-    // Start timers for all orders
-    orders.forEach(order => {
-        startOrderTimer(order.id, order.created_at);
-    });
-}
-
-function getTimeAgo(dateString) {
-    const date = new Date(dateString);
+function getTimeAgo(dateStr) {
+    const date = parseMySQLDate(dateStr);
     const now = new Date();
     const diff = Math.floor((now - date) / 1000);
-    
+
     if (diff < 60) return diff + 's ago';
     if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
     if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
     return date.toLocaleDateString();
 }
 
-function updateOrderStatus(orderId, status) {
-    fetch('api/update-order.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order_id: orderId, status: status })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            loadKitchenOrders();
-            showToast('Order status updated!', 'success');
-        } else {
-            showToast('Error updating order', 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showToast('Error updating order', 'error');
-    });
-}
-
-function playNotificationSound() {
-    try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        oscillator.frequency.value = 800;
-        oscillator.type = 'sine';
-        gainNode.gain.value = 0.3;
-        
-        oscillator.start();
-        
-        setTimeout(() => { oscillator.frequency.value = 1000; }, 200);
-        setTimeout(() => { oscillator.frequency.value = 800; }, 400);
-        setTimeout(() => { oscillator.stop(); }, 600);
-    } catch (e) {
-        console.log('Audio not supported');
-    }
-}
-
-// ==================== TOAST NOTIFICATIONS ====================
-function showToast(message, type = 'success') {
-    // Remove existing toasts
-    const existingToasts = document.querySelectorAll('.toast');
-    existingToasts.forEach(t => t.remove());
-    
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.innerHTML = `
-        <span class="toast-icon">${type === 'success' ? '✓' : '✕'}</span>
-        <span>${message}</span>
-    `;
-    
-    document.body.appendChild(toast);
-    
-    setTimeout(() => {
-        toast.style.animation = 'slideInRight 0.4s ease reverse';
-        setTimeout(() => toast.remove(), 400);
-    }, 3000);
-}
-
-// ==================== LAZY LOADING ====================
-function lazyLoadImages() {
-    const images = document.querySelectorAll('img[data-src]');
-    
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const img = entry.target;
-                img.src = img.dataset.src;
-                img.removeAttribute('data-src');
-                observer.unobserve(img);
-            }
-        });
-    });
-    
-    images.forEach(img => observer.observe(img));
-}
-
-// ==================== INITIALIZATION ====================
+// Global Event Listeners Setup
 document.addEventListener('DOMContentLoaded', function() {
     updateCartCount();
-    
-    // Setup cart overlay click to close
-    const cartOverlay = document.querySelector('.cart-overlay');
-    if (cartOverlay) {
-        cartOverlay.addEventListener('click', closeCartPanel);
-    }
-    
-    // Setup search functionality
-    const searchInput = document.querySelector('.search-box input');
-    if (searchInput) {
-        searchInput.addEventListener('input', (e) => searchMenu(e.target.value));
-    }
-    
-    // Setup call waiter button
-    const callWaiterBtn = document.querySelector('.call-waiter-btn');
-    if (callWaiterBtn) {
-        callWaiterBtn.addEventListener('click', callWaiter);
-    }
-    
-    // Setup cart close button
-    const cartClose = document.querySelector('.cart-close');
-    if (cartClose) {
-        cartClose.addEventListener('click', closeCartPanel);
-    }
-    
-    // Initialize lazy loading
-    lazyLoadImages();
-    
-    // Initialize kitchen dashboard
-    if (window.location.pathname.includes('kitchen-dashboard')) {
-        loadKitchenOrders();
-        // Auto-refresh every 5 seconds
-        setInterval(loadKitchenOrders, 5000);
-    }
-});
 
-// Cart button click handler
-document.addEventListener('click', function(e) {
-    if (e.target.closest('.cart-btn')) {
-        openCartPanel();
-    }
+    // Click handler for cart overlay & buttons
+    const cartOverlay = document.querySelector('.cart-overlay');
+    if (cartOverlay) cartOverlay.addEventListener('click', closeCartPanel);
+
+    const cartClose = document.querySelector('.cart-close');
+    if (cartClose) cartClose.addEventListener('click', closeCartPanel);
+
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('#cartBtn') || e.target.closest('.cart-btn')) {
+            openCartPanel();
+        }
+    });
 });

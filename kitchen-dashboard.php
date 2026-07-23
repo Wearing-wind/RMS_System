@@ -2,555 +2,300 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kitchen Dashboard - QR Restaurant</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Kitchen Dashboard - QR Cafe</title>
+    <link rel="stylesheet" href="css/spatial.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-            min-height: 100vh;
-            padding-bottom: 30px;
-        }
-        
-        .header-bar {
-            background: linear-gradient(135deg, #0f0f23, #1a1a2e);
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-        }
-        
-        .header-title {
-            color: white;
-            font-size: 28px;
-            font-weight: bold;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-        
-        .stats-row {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-        
-        .stat-badge {
-            background: rgba(255,255,255,0.25);
-            padding: 10px 20px;
-            border-radius: 12px;
-            text-align: center;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        
-        .stat-badge .num {
-            color: white;
-            font-size: 24px;
-            font-weight: bold;
-            display: block;
-        }
-        
-        .stat-badge .label {
-            color: rgba(255,255,255,0.9);
-            font-size: 12px;
-            font-weight: 600;
-        }
-        
-        .btn-refresh {
-            background: white;
-            color: #ff6b35;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 25px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            transition: all 0.3s;
-        }
-        
-        .btn-refresh:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
-        }
-        
-        .section-title {
-            color: white;
-            font-size: 22px;
-            margin: 25px 20px 15px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            font-weight: 600;
-        }
-        
-        .waiter-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 15px;
-            padding: 0 20px;
-            margin-bottom: 25px;
-        }
-        
-        .waiter-card {
-            background: white;
-            padding: 20px;
-            border-radius: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.02); }
-        }
-        
-        .waiter-card .table-num {
-            color: #ff6b35;
-            font-size: 28px;
-            font-weight: bold;
-        }
-        
-        .waiter-card .table-label {
-            color: #666;
-            font-size: 12px;
-            display: block;
-        }
-        
-        .waiter-card .serve-btn {
-            background: #ff6b35;
-            color: white;
-            border: none;
-            padding: 10px 18px;
-            border-radius: 20px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 3px 10px rgba(255,107,53,0.4);
-            transition: all 0.3s;
-        }
-        
-        .waiter-card .serve-btn:hover {
-            background: #e55a2b;
-            transform: scale(1.05);
-        }
-        
-        .no-calls-msg {
-            color: white;
-            padding: 20px;
-            text-align: center;
-            grid-column: 1 / -1;
-            font-size: 16px;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-        }
-        
-        .orders-container {
-            padding: 0 20px;
-        }
-        
-        .orders-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 20px;
-        }
-        
-        .order-card {
-            background: white;
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 6px 25px rgba(0,0,0,0.15);
-            transition: transform 0.3s;
-        }
-        
-        .order-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-        
-        .order-header {
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .order-header.status-new { background: #ff7675; }
-        .order-header.status-preparing { background: #fdcb6e; color: #333; }
-        .order-header.status-ready { background: #00b894; }
-        .order-header.status-completed { background: #636e72; }
-        
-        .order-num {
-            font-size: 20px;
-            font-weight: bold;
-            color: white;
-        }
-        
-        .order-header.status-preparing .order-num { color: #333; }
-        
-        .order-table-badge {
-            background: rgba(255,255,255,0.3);
-            padding: 6px 14px;
-            border-radius: 15px;
-            font-size: 13px;
-            font-weight: bold;
-        }
-        
-        .order-body {
-            padding: 20px;
-        }
-        
-        .order-items {
-            max-height: 160px;
-            overflow-y: auto;
-            margin-bottom: 15px;
-            border: 1px solid #eee;
-            border-radius: 10px;
-            padding: 10px;
-        }
-        
-        .order-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid #f0f0f0;
-            font-size: 14px;
-        }
-        
-        .order-item:last-child { border-bottom: none; }
-        
-        .item-qty {
-            color: #ff6b35;
-            font-weight: bold;
-            margin-right: 5px;
-        }
-        
-        .item-price {
-            color: #666;
-            font-weight: 500;
-        }
-        
-        .order-note {
-            background: #fff9e6;
-            padding: 12px;
-            border-radius: 10px;
-            font-size: 14px;
-            margin-bottom: 15px;
-            border-left: 4px solid #fdcb6e;
-        }
-        
-        .order-time-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            color: #666;
-            font-size: 14px;
-        }
-        
-        .order-timer {
-            background: #f5f6fa;
-            padding: 6px 14px;
-            border-radius: 15px;
-            font-weight: bold;
-            color: #ff6b35;
-        }
-        
-        .action-btns {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
-        }
-        
-        .action-btn {
-            border: none;
-            padding: 12px 8px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 12px;
-            transition: all 0.3s;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-        }
-        
-        .action-btn:hover { transform: scale(1.05); }
-        .action-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-        
-        .btn-new { background: #ff7675; color: white; }
-        .btn-preparing { background: #fdcb6e; color: #333; }
-        .btn-ready { background: #55efc4; color: #333; }
-        .btn-done { background: #00b894; color: white; }
-        
-        .btn-active {
-            box-shadow: 0 0 0 3px rgba(0,0,0,0.3);
-        }
-        
-        .loading-msg, .empty-msg, .error-msg {
-            text-align: center;
-            padding: 50px 20px;
-            color: white;
-            font-size: 18px;
-            grid-column: 1 / -1;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-        
-        .error-msg {
-            background: rgba(255,118,117,0.9);
-            border-radius: 15px;
-            margin: 20px;
-        }
-        
-        @media (max-width: 600px) {
-            .header-bar { flex-direction: column; text-align: center; }
-            .orders-grid { grid-template-columns: 1fr; }
-            .action-btns { grid-template-columns: repeat(2, 1fr); }
-        }
-        
-        /* New order animation */
-        .new-order-anim {
-            animation: newOrderPulse 1.5s ease-in-out infinite;
-        }
-        
-        @keyframes newOrderPulse {
-            0%, 100% { 
-                box-shadow: 0 6px 25px rgba(255, 107, 53, 0.3);
-                transform: scale(1);
-            }
-            50% { 
-                box-shadow: 0 6px 35px rgba(255, 107, 53, 0.6);
-                transform: scale(1.02);
-            }
-        }
-        
-        .order-items-count {
-            font-size: 0.9rem;
-            color: #666;
-            margin-bottom: 10px;
-            font-weight: 600;
-        }
+        body { background: var(--bg-canvas-alt); }
     </style>
 </head>
-<body>
-    <div class="header-bar">
-        <div class="header-title">👨‍🍳 Kitchen Dashboard</div>
-        <div class="stats-row">
-            <div class="stat-badge">
-                <span class="num" id="newCount">0</span>
+<body class="kitchen-body">
+
+    <!-- Header Bar -->
+    <header class="kitchen-header">
+        <div class="kitchen-title" style="font-family: var(--font-sans); font-size: 1.3rem;">
+            <span>👨‍🍳</span> Cafe Kitchen Control
+        </div>
+
+        <div class="kitchen-stats">
+            <div class="stat-pill new" style="background: rgba(244, 63, 94, 0.15); border: 1px solid var(--danger);">
+                <span class="num" id="statNewCount" style="color: #fda4af;">0</span>
                 <span class="label">New</span>
             </div>
-            <div class="stat-badge">
-                <span class="num" id="prepCount">0</span>
-                <span class="label">Preparing</span>
+            <div class="stat-pill prep" style="background: rgba(245, 158, 11, 0.15); border: 1px solid var(--warning);">
+                <span class="num" id="statPrepCount" style="color: #fde68a;">0</span>
+                <span class="label">Prep</span>
             </div>
-            <div class="stat-badge">
-                <span class="num" id="readyCount">0</span>
+            <div class="stat-pill ready" style="background: rgba(34, 197, 94, 0.15); border: 1px solid var(--success);">
+                <span class="num" id="statReadyCount" style="color: #4ade80;">0</span>
                 <span class="label">Ready</span>
             </div>
         </div>
-        <button class="btn-refresh" onclick="loadData()">🔄 Refresh</button>
-    </div>
 
-    <div class="section-title">🔔 Waiter Calls</div>
-    <div class="waiter-grid" id="waiterGrid">
-        <div class="no-calls-msg">Loading...</div>
-    </div>
+        <button class="cart-btn" style="background: rgba(255,255,255,0.08); font-size: 0.85rem;" onclick="loadKitchenData()">
+            🔄 Refresh
+        </button>
+    </header>
 
-    <div class="section-title">📋 Active Orders</div>
-    <div class="orders-container">
-        <div class="orders-grid" id="ordersGrid">
-            <div class="loading-msg">Loading orders...</div>
+    <!-- Waiter Calls Section -->
+    <div class="container" style="max-width: 1200px; margin-top: 16px; margin-bottom: 16px;">
+        <h3 style="font-size: 0.95rem; font-weight: 800; color: var(--text-secondary); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+            <span>🔔</span> Table Waiter Calls
+        </h3>
+        <div id="waiterCallsGrid" style="display: flex; gap: 10px; overflow-x: auto; white-space: nowrap; padding-bottom: 6px; scrollbar-width: none;">
+            <div style="color: var(--text-muted); font-size: 0.85rem;">No active waiter calls</div>
         </div>
     </div>
 
+    <!-- Active / Completed / Rejected Tabs (HORIZONTAL ROW FOR MOBILE LAYOUT) -->
+    <div class="container" style="max-width: 1200px;">
+        <div style="display: flex; flex-direction: row; gap: 10px; overflow-x: auto; white-space: nowrap; flex-wrap: nowrap; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; scrollbar-width: none;">
+            <button class="category-btn active" id="tabActiveBtn" style="flex-shrink: 0;" onclick="switchTab('active')">
+                📋 Active Orders (<span id="activeOrdersTabCount">0</span>)
+            </button>
+            <button class="category-btn" id="tabCompletedBtn" style="flex-shrink: 0;" onclick="switchTab('completed')">
+                ✅ Completed Orders
+            </button>
+            <button class="category-btn" id="tabRejectedBtn" style="flex-shrink: 0;" onclick="switchTab('cancelled')">
+                🚫 Rejected Orders
+            </button>
+        </div>
+    </div>
+
+    <!-- Orders Grid -->
+    <main style="display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; padding: 16px; max-width: 1200px; margin: 0 auto;" id="kitchenOrdersGrid">
+        <div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 40px;">
+            Loading kitchen orders...
+        </div>
+    </main>
+
+    <!-- Order Rejection Reason Modal -->
+    <div class="spatial-modal" id="rejectOrderModal">
+        <div class="spatial-modal-overlay" onclick="closeRejectModal()"></div>
+        <div class="spatial-modal-content">
+            <button class="spatial-modal-close" onclick="closeRejectModal()">✕</button>
+            <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--danger); margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                <span>🚫</span> Reject Order #<span id="rejectModalOrderId">0</span>
+            </h3>
+            <p style="color: var(--text-muted); font-size: 0.82rem; margin-bottom: 16px;">
+                Select a reason for rejecting this order. The customer will see this message on their tracking screen.
+            </p>
+
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; font-weight: 700; font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 6px;">Common Rejection Reasons:</label>
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <label class="custom-radio" style="width: 100%;">
+                        <input type="radio" name="reject_reason" value="Customer accidentally placed wrong order or quantity" checked>
+                        <span class="radio-label" style="width: 100%;">Customer placed wrong quantity / order</span>
+                    </label>
+                    <label class="custom-radio" style="width: 100%;">
+                        <input type="radio" name="reject_reason" value="Item out of stock / ingredient unavailable">
+                        <span class="radio-label" style="width: 100%;">Item out of stock / ingredient unavailable</span>
+                    </label>
+                    <label class="custom-radio" style="width: 100%;">
+                        <input type="radio" name="reject_reason" value="Kitchen at max capacity / closing soon">
+                        <span class="radio-label" style="width: 100%;">Kitchen busy / closing soon</span>
+                    </label>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label for="customRejectReason" style="display: block; font-weight: 700; font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 4px;">Custom Reason (Optional):</label>
+                <input type="text" id="customRejectReason" placeholder="Type custom explanation..." style="width: 100%; background: rgba(14, 11, 8, 0.8); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); padding: 10px; color: white; font-family: inherit; font-size: 0.88rem; outline: none;">
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button onclick="closeRejectModal()" class="add-to-cart-btn" style="flex: 1; background: rgba(255,255,255,0.1); color: white;">Cancel</button>
+                <button onclick="confirmRejectOrder()" class="checkout-btn" style="flex: 2; background: var(--danger); color: white; font-weight: 800; padding: 10px;">Confirm Rejection</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/modern.js"></script>
     <script>
-        let lastOrderCount = 0;
-        let lastOrderIds = [];
-        
-        function loadData() {
+        let currentTab = 'active';
+        let pendingRejectOrderId = null;
+        let lastSeenOrderIds = [];
+        let isFirstLoad = true;
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.getElementById('tabActiveBtn').classList.toggle('active', tab === 'active');
+            document.getElementById('tabCompletedBtn').classList.toggle('active', tab === 'completed');
+            document.getElementById('tabRejectedBtn').classList.toggle('active', tab === 'cancelled');
+            loadKitchenData();
+        }
+
+        function loadKitchenData() {
             loadWaiterCalls();
             loadOrders();
         }
-        
+
         function loadWaiterCalls() {
             fetch('api/call-waiter.php')
                 .then(r => r.json())
                 .then(data => {
-                    const grid = document.getElementById('waiterGrid');
+                    const grid = document.getElementById('waiterCallsGrid');
                     const calls = data.calls || [];
                     if (calls.length === 0) {
-                        grid.innerHTML = '<div class="no-calls-msg">No waiter calls</div>';
+                        grid.innerHTML = '<div style="color: var(--text-muted); font-size: 0.85rem;">No active waiter calls</div>';
                     } else {
                         grid.innerHTML = calls.map(c => `
-                            <div class="waiter-card">
+                            <div class="spatial-card" style="padding: 10px 16px; display: flex; align-items: center; gap: 14px; min-width: 180px; flex-shrink: 0;">
                                 <div>
-                                    <span class="table-num">${c.table_number}</span>
-                                    <span class="table-label">Table</span>
+                                    <div style="font-weight: 800; font-size: 1.1rem; color: var(--primary);">Table ${c.table_number}</div>
+                                    <div style="font-size: 0.72rem; color: var(--text-muted);">${getTimeAgo(c.created_at)}</div>
                                 </div>
-                                <button class="serve-btn" onclick="markServed(${c.id})">✓ Serve</button>
+                                <button onclick="markWaiterServed(${c.id})" class="add-to-cart-btn" style="padding: 4px 12px; font-size: 0.75rem; background: var(--success); color: white;">
+                                    ✓ Served
+                                </button>
                             </div>
                         `).join('');
                     }
                 })
-                .catch(e => console.error(e));
+                .catch(err => console.error(err));
         }
-        
-        function markServed(id) {
+
+        function markWaiterServed(id) {
             fetch('api/call-waiter.php?id=' + id + '&action=serve', { method: 'POST' })
                 .then(r => r.json())
                 .then(() => loadWaiterCalls());
         }
-        
+
         function loadOrders() {
-            fetch('api/orders.php?status=all')
+            fetch('api/orders.php?status=' + currentTab)
                 .then(r => r.json())
                 .then(data => {
-                    const grid = document.getElementById('ordersGrid');
-                    
-                    if (data.error) {
-                        grid.innerHTML = '<div class="error-msg">Error: ' + data.error + '</div>';
-                        return;
-                    }
-                    
+                    const grid = document.getElementById('kitchenOrdersGrid');
                     const orders = data.orders || [];
-                    
-                    // Check for new orders and play sound
-                    const currentOrderIds = orders.map(o => o.id);
-                    const newOrders = orders.filter(o => o.status === 'new');
-                    
-                    if (lastOrderCount > 0 && newOrders.length > 0) {
-                        // Check if there are new orders that weren't there before
-                        const newOrderIds = currentOrderIds.filter(id => !lastOrderIds.includes(id));
-                        if (newOrderIds.length > 0) {
-                            playNotificationSound();
+
+                    if (currentTab === 'active') {
+                        const newCount = orders.filter(o => o.status === 'new').length;
+                        const prepCount = orders.filter(o => o.status === 'preparing').length;
+                        const readyCount = orders.filter(o => o.status === 'ready').length;
+
+                        document.getElementById('statNewCount').textContent = newCount;
+                        document.getElementById('statPrepCount').textContent = prepCount;
+                        document.getElementById('statReadyCount').textContent = readyCount;
+                        document.getElementById('activeOrdersTabCount').textContent = orders.length;
+
+                        const currentOrderIds = orders.map(o => o.id);
+                        if (!isFirstLoad) {
+                            const newOrderArrived = currentOrderIds.some(id => !lastSeenOrderIds.includes(id));
+                            if (newOrderArrived && newCount > 0) {
+                                playSuccessChime();
+                                showToast('🔔 New order received in kitchen!', 'warning');
+                            }
                         }
+                        lastSeenOrderIds = currentOrderIds;
+                        isFirstLoad = false;
                     }
-                    
-                    // Update tracking
-                    lastOrderIds = currentOrderIds;
-                    lastOrderCount = orders.length;
-                    
-                    document.getElementById('newCount').textContent = orders.filter(o => o.status === 'new').length;
-                    document.getElementById('prepCount').textContent = orders.filter(o => o.status === 'preparing').length;
-                    document.getElementById('readyCount').textContent = orders.filter(o => o.status === 'ready').length;
-                    
+
                     if (orders.length === 0) {
-                        grid.innerHTML = '<div class="empty-msg">No orders yet</div>';
+                        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 40px;">
+                            <div style="font-size: 2.8rem; margin-bottom: 8px;">📋</div>
+                            <h3>${currentTab === 'cancelled' ? 'No cancelled orders found' : currentTab === 'completed' ? 'No completed orders yet' : 'No active orders'}</h3>
+                        </div>`;
                         return;
                     }
-                    
+
                     grid.innerHTML = orders.map(o => {
+                        const isNew = (o.status === 'new');
                         const items = o.items || [];
                         const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);
+
                         return `
-                            <div class="order-card ${o.status === 'new' ? 'new-order-anim' : ''}">
-                                <div class="order-header status-${o.status}">
-                                    <span class="order-num">#${o.id}</span>
-                                    <span class="order-table-badge">Table ${o.table_number}</span>
+                            <div class="spatial-card" style="padding: 16px; display: flex; flex-direction: column;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--glass-border); padding-bottom: 8px; margin-bottom: 10px;">
+                                    <div>
+                                        <div style="font-weight: 800; font-size: 1.05rem; color: var(--text-primary);">Order #${o.id}</div>
+                                        <div style="font-size: 0.76rem; color: var(--text-muted);">📍 Table ${o.table_number} • ${getTimeAgo(o.created_at)}</div>
+                                    </div>
+                                    <span style="font-weight: 800; font-size: 0.72rem; text-transform: uppercase; padding: 2px 8px; border-radius: var(--radius-pill); background: rgba(198, 124, 78, 0.2); color: var(--primary); border: 1px solid var(--primary);">${o.status}</span>
                                 </div>
-                                <div class="order-body">
-                                    <div class="order-items-count">📦 ${itemCount} item${itemCount > 1 ? 's' : ''}</div>
-                                    <div class="order-items">
+
+                                <div style="flex: 1; display: flex; flex-direction: column;">
+                                    <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">
+                                        📦 ${itemCount} items ${o.payment_method === 'cash' ? '<span style="color:#4ade80;">[CASH REQUEST]</span>' : ''}
+                                    </div>
+                                    <div style="max-height: 160px; overflow-y: auto; margin-bottom: 12px;">
                                         ${items.map(i => `
-                                            <div class="order-item">
-                                                <span><span class="item-qty">${i.quantity}x</span> ${i.name}</span>
-                                                <span class="item-price">Rs.${i.price * i.quantity}</span>
+                                            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.03);">
+                                                <span><strong style="color: var(--primary);">${i.quantity}x</strong> ${i.name}</span>
+                                                <span style="color: var(--primary); font-weight: 700;">Rs.${i.price * i.quantity}</span>
                                             </div>
                                         `).join('')}
                                     </div>
-                                    ${o.notes ? `<div class="order-note"><strong>📝 Note:</strong> ${o.notes}</div>` : ''}
-                                    <div class="order-time-row">
-                                        <span>🕐 ${getTimeAgo(o.created_at)}</span>
-                                        <span class="order-timer" id="timer${o.id}">0:00</span>
-                                    </div>
-                                    <div class="action-btns">
-                                        <button class="action-btn btn-new ${o.status === 'new' ? 'btn-active' : ''}" 
-                                            onclick="updateStatus(${o.id}, 'new')" ${o.status === 'new' ? 'disabled' : ''}>🆕 New</button>
-                                        <button class="action-btn btn-preparing ${o.status === 'preparing' ? 'btn-active' : ''}" 
-                                            onclick="updateStatus(${o.id}, 'preparing')" ${o.status === 'preparing' ? 'disabled' : ''}>🔥 Prep</button>
-                                        <button class="action-btn btn-ready ${o.status === 'ready' ? 'btn-active' : ''}" 
-                                            onclick="updateStatus(${o.id}, 'ready')" ${o.status === 'ready' ? 'disabled' : ''}>✅ Ready</button>
-                                        <button class="action-btn btn-done ${o.status === 'completed' ? 'btn-active' : ''}" 
-                                            onclick="updateStatus(${o.id}, 'completed')" ${o.status === 'completed' ? 'disabled' : ''}>✔ Done</button>
-                                    </div>
+
+                                    ${o.notes ? `<div style="background: rgba(198, 124, 78, 0.1); border: 1px solid var(--glass-border); padding: 8px; border-radius: var(--radius-sm); font-size: 0.78rem; color: #fde68a; margin-bottom: 12px;"><strong>📝 Notes:</strong> ${o.notes}</div>` : ''}
+
+                                    ${currentTab === 'active' ? `
+                                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-top: auto;">
+                                            <button class="add-to-cart-btn" style="background: rgba(245, 158, 11, 0.2); color: #fde68a; border: 1px solid var(--warning);" onclick="updateOrderStatus(${o.id}, 'preparing')">🔥 Prep</button>
+                                            <button class="add-to-cart-btn" style="background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid var(--success);" onclick="updateOrderStatus(${o.id}, 'ready')">✅ Ready</button>
+                                            <button class="checkout-btn" style="grid-column: span 2; padding: 8px; font-size: 0.85rem;" onclick="updateOrderStatus(${o.id}, 'completed')">✔ Served / Done</button>
+                                            <button class="add-to-cart-btn" style="grid-column: span 2; background: rgba(244, 63, 94, 0.2); color: #fda4af; border: 1px solid var(--danger);" onclick="openRejectModal(${o.id})">❌ Reject / Cancel Order</button>
+                                        </div>
+                                    ` : currentTab === 'completed' ? `
+                                        <div style="font-size: 0.8rem; color: var(--success); font-weight: 700; text-align: center; margin-top: auto;">
+                                            ✓ Completed & Served
+                                        </div>
+                                    ` : `
+                                        <div style="font-size: 0.8rem; color: var(--danger); font-weight: 600; text-align: center; margin-top: auto;">
+                                            Order Rejected
+                                        </div>
+                                    `}
                                 </div>
                             </div>
                         `;
                     }).join('');
-                    
-                    orders.forEach(o => startTimer(o.id, o.created_at));
                 })
-                .catch(e => {
-                    document.getElementById('ordersGrid').innerHTML = '<div class="error-msg">Failed to load orders. Make sure database is set up.</div>';
-                });
+                .catch(err => console.error(err));
         }
-        
-        function updateStatus(id, status) {
+
+        function updateOrderStatus(orderId, status, reason = '') {
             fetch('api/update-order.php', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({order_id: id, status: status})
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ order_id: orderId, status: status, reason: reason })
             })
             .then(r => r.json())
-            .then(d => {
-                if (d.success) loadOrders();
-                else alert('Error updating order');
-            });
+            .then(data => {
+                if (data.success) {
+                    showToast(`Order #${orderId} set to ${status}`, 'success');
+                    loadOrders();
+                } else {
+                    showToast(data.message || 'Error updating order', 'error');
+                }
+            })
+            .catch(err => console.error(err));
         }
-        
-        function getTimeAgo(dateStr) {
-            const diff = Math.floor((new Date() - new Date(dateStr)) / 1000);
-            if (diff < 60) return diff + 's ago';
-            if (diff < 3600) return Math.floor(diff/60) + 'm ago';
-            return Math.floor(diff/3600) + 'h ago';
+
+        function openRejectModal(orderId) {
+            pendingRejectOrderId = orderId;
+            document.getElementById('rejectModalOrderId').textContent = orderId;
+            document.getElementById('rejectOrderModal').classList.add('active');
         }
-        
-        function startTimer(id, startTime) {
-            const el = document.getElementById('timer' + id);
-            if (!el) return;
-            setInterval(() => {
-                const diff = Math.floor((new Date() - new Date(startTime)) / 1000);
-                el.textContent = Math.floor(diff/60) + ':' + (diff%60).toString().padStart(2,'0');
-            }, 1000);
+
+        function closeRejectModal() {
+            document.getElementById('rejectOrderModal').classList.remove('active');
+            pendingRejectOrderId = null;
         }
-        
-        // Sound notification for new orders
-        function playNotificationSound() {
-            try {
-                // Create a pleasant notification sound
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                
-                // Play multiple tones for attention
-                const playTone = (freq, delay) => {
-                    setTimeout(() => {
-                        const oscillator = audioContext.createOscillator();
-                        const gainNode = audioContext.createGain();
-                        
-                        oscillator.connect(gainNode);
-                        gainNode.connect(audioContext.destination);
-                        
-                        oscillator.frequency.value = freq;
-                        oscillator.type = 'sine';
-                        gainNode.gain.value = 0.3;
-                        
-                        oscillator.start();
-                        oscillator.stop(audioContext.currentTime + 0.3);
-                    }, delay);
-                };
-                
-                playTone(800, 0);
-                playTone(1000, 200);
-                playTone(800, 400);
-                playTone(1200, 600);
-            } catch(e) {
-                console.log('Audio notification not supported');
-            }
+
+        function confirmRejectOrder() {
+            if (!pendingRejectOrderId) return;
+            const selectedRadio = document.querySelector('input[name="reject_reason"]:checked');
+            const customInput = document.getElementById('customRejectReason').value.trim();
+            const reason = customInput || (selectedRadio ? selectedRadio.value : 'Cancelled by kitchen');
+
+            updateOrderStatus(pendingRejectOrderId, 'cancelled', reason);
+            closeRejectModal();
         }
-        
-        loadData();
-        setInterval(loadData, 5000);
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadKitchenData();
+            setInterval(loadKitchenData, 5000);
+        });
     </script>
 </body>
 </html>
