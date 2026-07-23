@@ -25,7 +25,7 @@ if (!$order) {
 }
 
 // Fetch Order Items
-$items_stmt = $conn->prepare("SELECT oi.*, mi.image FROM order_items oi LEFT JOIN menu_items mi ON oi.item_name = mi.name WHERE oi.order_id = ?");
+$items_stmt = $conn->prepare("SELECT oi.*, mi.name as item_name, mi.image FROM order_items oi LEFT JOIN menu_items mi ON oi.menu_item_id = mi.id WHERE oi.order_id = ?");
 $items_stmt->bind_param("i", $order_id);
 $items_stmt->execute();
 $items_res = $items_stmt->get_result();

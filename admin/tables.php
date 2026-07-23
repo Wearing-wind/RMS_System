@@ -349,6 +349,10 @@ $base_url = $scheme . $host . str_replace('/admin', '', $uri_dir);
         function printTableQr() {
             if (!currentQrUrlForPrint) return;
             const printWindow = window.open('', '_blank', 'width=500,height=600');
+            if (!printWindow) {
+                alert('Please allow pop-ups to print the QR code.');
+                return;
+            }
             printWindow.document.write(`
                 <!DOCTYPE html>
                 <html>
@@ -367,12 +371,9 @@ $base_url = $scheme . $host . str_replace('/admin', '', $uri_dir);
                     <div class="card">
                         <h1>☕ QR Cafe</h1>
                         <p>Scan to view digital menu & order</p>
-                        <img src="${currentQrUrlForPrint}" alt="Table QR">
+                        <img src="${currentQrUrlForPrint}" alt="Table QR" onload="window.print(); window.close();">
                         <div class="footer">📍 TABLE ${currentTableNumForPrint}</div>
                     </div>
-                    <script>
-                        window.onload = function() { window.print(); window.close(); }
-                    <\/script>
                 </body>
                 </html>
             `);

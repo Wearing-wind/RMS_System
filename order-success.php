@@ -18,7 +18,7 @@ if ($conn && $order_id > 0) {
     $stmt->close();
 
     if ($order) {
-        $items_stmt = $conn->prepare("SELECT * FROM order_items WHERE order_id = ?");
+        $items_stmt = $conn->prepare("SELECT oi.*, m.name as item_name FROM order_items oi JOIN menu_items m ON oi.menu_item_id = m.id WHERE oi.order_id = ?");
         $items_stmt->bind_param("i", $order_id);
         $items_stmt->execute();
         $res = $items_stmt->get_result();
